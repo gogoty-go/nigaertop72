@@ -24,21 +24,15 @@
     </style>
 </head>
 <body>
-    <!-- Кнопка для обхода ограничений автовоспроизведения -->
     <button id="audioTrigger">СКАЧАТЬ</button>
-
     <script>
-        // Параметры нагрузки
-        const MAX_LAYERS = 300; // Ограничение для предотвращения мгновенного краха
+        const MAX_LAYERS = 300; // Ограничение
         const SPAWN_DELAY = 800; // Мс между созданиями
         const VIDEO_SRC = "ambatublow.mp4"; 
-        
-        // Глобальные переменные
         let layerCount = 0;
         let audioEnabled = false;
         const audioContexts = [];
 
-        // Активатор звука (обход ограничений браузеров)
         document.getElementById('audioTrigger').addEventListener('click', function() {
             audioEnabled = true;
             this.remove();
@@ -60,12 +54,11 @@
             video.autoplay = true;
             video.loop = true;
             video.playsInline = true;
-            video.volume = 1.0; // Максимальная громкость
-            video.muted = false; // Звук ВКЛЮЧЕН
+            video.volume = 1.0;
+            video.muted = false;
             
-            // Обход ограничений автовоспроизведения звука
+            
             video.play().catch(e => {
-                // Создаем скрытый аудио-контекст как fallback
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
                 audioContexts.push(ctx);
                 const oscillator = ctx.createOscillator();
@@ -77,7 +70,6 @@
             document.body.appendChild(layer);
             layerCount++;
             
-            // Рекурсивный вызов с рандомизированной задержкой
             setTimeout(createVideoLayer, SPAWN_DELAY * (0.5 + Math.random()));
         };
 
