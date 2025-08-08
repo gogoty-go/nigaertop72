@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Half-Life 2 Browser Experience</title>
+    <title>Half-Life 1: Black Mesa Experience</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/PointerLockControls.min.js"></script>
     <style>
@@ -48,14 +48,24 @@
             z-index: 10;
         }
         
-        .health-bar {
+        .hl1-hud {
             position: absolute;
-            bottom: 30px;
-            left: 30px;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #4a752c;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .health-bar {
             width: 200px;
-            height: 25px;
+            height: 20px;
             background: rgba(50, 50, 50, 0.7);
-            border: 2px solid #333;
+            border: 1px solid #333;
+            margin-bottom: 5px;
+            position: relative;
         }
         
         .health-fill {
@@ -66,23 +76,32 @@
         }
         
         .weapon-info {
-            position: absolute;
-            bottom: 30px;
-            right: 30px;
-            text-align: right;
+            display: flex;
+            align-items: center;
+            margin-top: 10px;
+        }
+        
+        .weapon-icon {
+            width: 40px;
+            height: 40px;
+            background: rgba(100, 100, 100, 0.5);
+            border: 1px solid #4a752c;
+            margin-right: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
         }
         
         .weapon-name {
-            font-size: 24px;
+            font-size: 18px;
             color: #ffa500;
-            text-shadow: 0 0 5px #000;
-            margin-bottom: 5px;
         }
         
         .ammo-count {
-            font-size: 28px;
-            color: #fff;
-            text-shadow: 0 0 5px #000;
+            font-size: 24px;
+            color: #ff0;
+            margin-left: auto;
         }
         
         .crosshair {
@@ -98,13 +117,13 @@
             pointer-events: none;
         }
         
-        .start-screen {
+        #startScreen {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: linear-gradient(rgba(0, 10, 20, 0.9), rgba(0, 30, 50, 0.8)), 
+            background: linear-gradient(rgba(0, 0, 0, 0.9), rgba(0, 30, 0, 0.8)), 
                         url('https://i.imgur.com/5QzC2bW.png') center/cover;
             display: flex;
             flex-direction: column;
@@ -113,7 +132,7 @@
             z-index: 20;
         }
         
-        .logo {
+        .hl1-logo {
             font-size: 72px;
             font-weight: bold;
             color: #ffa500;
@@ -126,7 +145,7 @@
         }
         
         .start-btn {
-            background: linear-gradient(45deg, #ff8c00, #ff4500);
+            background: linear-gradient(45deg, #4a752c, #6b8e23);
             color: white;
             border: none;
             padding: 15px 40px;
@@ -138,13 +157,13 @@
             letter-spacing: 2px;
             margin-top: 30px;
             transition: all 0.3s;
-            box-shadow: 0 0 15px rgba(255, 140, 0, 0.5);
+            box-shadow: 0 0 15px rgba(74, 117, 44, 0.5);
             pointer-events: auto;
         }
         
         .start-btn:hover {
             transform: scale(1.05);
-            box-shadow: 0 0 25px rgba(255, 140, 0, 0.8);
+            box-shadow: 0 0 25px rgba(74, 117, 44, 0.8);
         }
         
         .start-btn:active {
@@ -155,7 +174,7 @@
             position: absolute;
             top: 20px;
             left: 20px;
-            background: rgba(20, 20, 30, 0.7);
+            background: rgba(20, 20, 20, 0.7);
             padding: 15px;
             border-radius: 5px;
             border-left: 4px solid #ffa500;
@@ -188,26 +207,26 @@
             z-index: 15;
         }
         
-        .combine-soldier {
+        #enemyRadar {
             position: absolute;
-            width: 50px;
-            height: 50px;
-            background: rgba(255, 0, 0, 0.3);
+            bottom: 20px;
+            right: 20px;
+            width: 120px;
+            height: 120px;
+            background: rgba(0, 20, 0, 0.7);
+            border: 2px solid #4a752c;
+            border-radius: 50%;
+        }
+        
+        .scientist {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: rgba(0, 100, 255, 0.3);
             border-radius: 50%;
             display: none;
             pointer-events: none;
             z-index: 5;
-        }
-        
-        #enemyRadar {
-            position: absolute;
-            bottom: 30px;
-            right: 250px;
-            width: 150px;
-            height: 150px;
-            background: rgba(0, 20, 40, 0.7);
-            border: 2px solid #ffa500;
-            border-radius: 50%;
         }
     </style>
 </head>
@@ -216,32 +235,34 @@
         <canvas id="gameCanvas"></canvas>
         
         <div id="uiContainer">
-            <div class="health-bar">
-                <div class="health-fill" id="healthBar"></div>
-            </div>
-            
-            <div class="weapon-info">
-                <div class="weapon-name">Гравитационная пушка</div>
-                <div class="ammo-count" id="ammoCount">∞</div>
+            <div class="hl1-hud">
+                <div class="health-bar">
+                    <div class="health-fill" id="healthBar"></div>
+                </div>
+                <div class="weapon-info">
+                    <div class="weapon-icon">C</div>
+                    <div class="weapon-name">CROWBAR</div>
+                    <div class="ammo-count" id="ammoCount">-</div>
+                </div>
             </div>
             
             <div class="crosshair"></div>
             
             <div class="game-overlay">
-                <div class="objective">ЦЕЛЬ МИССИИ:</div>
-                <div class="objective-text">Доберитесь до контрольной точки на другой стороне города. Уничтожьте солдат Альянса и избегайте снайперского огня.</div>
+                <div class="objective">OBJECTIVE:</div>
+                <div class="objective-text">Reach the Lambda Complex. Avoid or neutralize hostile creatures.</div>
             </div>
             
-            <div class="hud-message" id="hudMessage">СОЛДАТЫ АЛЬЯНСА ОБНАРУЖЕНЫ!</div>
+            <div class="hud-message" id="hudMessage">HOSTILE ENTITY DETECTED!</div>
             
             <div id="enemyRadar"></div>
             
-            <div class="start-screen" id="startScreen">
-                <div class="logo">HALF-LIFE 2</div>
+            <div id="startScreen">
+                <div class="hl1-logo">HALF-LIFE</div>
                 <div style="font-size: 24px; margin-bottom: 20px; text-align: center; max-width: 600px;">
-                    Город 17. Вы прибыли поездом. Вас ждет мрачный город,<br>контролируемый Альянсом. Ваша задача - выжить.
+                    Black Mesa Research Facility<br>You are Gordon Freeman, a theoretical physicist.
                 </div>
-                <button class="start-btn" id="startBtn">НАЧАТЬ ИГРУ</button>
+                <button class="start-btn" id="startBtn">BEGIN EXPERIMENT</button>
             </div>
         </div>
     </div>
@@ -257,8 +278,9 @@
         // Игровые переменные
         let playerHealth = 100;
         let gameStarted = false;
-        let gravityGunActive = false;
+        let currentWeapon = 'crowbar';
         let enemies = [];
+        let scientists = [];
         
         // Инициализация Three.js
         let scene, camera, renderer, controls;
@@ -266,19 +288,20 @@
         let raycaster, mouse;
         
         // Константы игры
-        const ENEMY_TYPES = ['soldier', 'elite', 'zombie'];
+        const ENEMY_TYPES = ['headcrab', 'zombie', 'vortigaunt', 'hgrunt'];
         const WEAPONS = {
-            gravity: { name: 'Гравитационная пушка', ammo: '∞' },
-            pistol: { name: 'Пистолет', ammo: 12 },
-            shotgun: { name: 'Дробовик', ammo: 6 }
+            crowbar: { name: 'CROWBAR', ammo: '-' },
+            glock: { name: '9MM PISTOL', ammo: 12 },
+            shotgun: { name: 'SHOTGUN', ammo: 6 },
+            crossbow: { name: 'CROSSBOW', ammo: 5 }
         };
         
         // Инициализация игры
         function initGame() {
             // Создание сцены
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x445566);
-            scene.fog = new THREE.Fog(0x445566, 20, 100);
+            scene.background = new THREE.Color(0x223344);
+            scene.fog = new THREE.Fog(0x223344, 20, 100);
             
             // Создание камеры
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -301,14 +324,15 @@
             directionalLight.castShadow = true;
             scene.add(directionalLight);
             
-            // Создание мира
-            createCityEnvironment();
+            // Создание мира Чёрной Мезы
+            createBlackMesaEnvironment();
             
             // Создание ракурса от первого лица
             initFPSControls();
             
-            // Создание врагов
+            // Создание врагов и персонажей
             createEnemies();
+            createScientists();
             
             // Запуск анимации
             animate();
@@ -319,8 +343,8 @@
             document.addEventListener('keydown', onKeyDown);
         }
         
-        // Создание городской среды
-        function createCityEnvironment() {
+        // Создание среды Чёрной Мезы
+        function createBlackMesaEnvironment() {
             // Текстуры
             const textureLoader = new THREE.TextureLoader();
             const groundTexture = textureLoader.load('https://i.imgur.com/5QzC2bW.png');
@@ -339,207 +363,177 @@
             ground.receiveShadow = true;
             scene.add(ground);
             
-            // Здания
-            for (let i = 0; i < 15; i++) {
-                createBuilding(
+            // Лабораторные коридоры
+            for (let i = 0; i < 10; i++) {
+                createLabCorridor(
                     Math.random() * 80 - 40,
                     0,
-                    Math.random() * 80 - 40,
-                    Math.random() * 10 + 15,
-                    Math.random() * 10 + 10,
-                    Math.random() * 10 + 10
-                );
-            }
-            
-            // Баррикады
-            for (let i = 0; i < 20; i++) {
-                createBarricade(
-                    Math.random() * 70 - 35,
-                    0,
-                    Math.random() * 70 - 35
-                );
-            }
-            
-            // Обломки и мусор
-            for (let i = 0; i < 30; i++) {
-                createDebris(
-                    Math.random() * 80 - 40,
-                    0.5,
                     Math.random() * 80 - 40
                 );
             }
             
-            // Контрольная точка
-            createCheckpoint(40, 0, -30);
+            // Научное оборудование
+            for (let i = 0; i < 20; i++) {
+                createLabEquipment(
+                    Math.random() * 70 - 35,
+                    0.5,
+                    Math.random() * 70 - 35
+                );
+            }
+            
+            // Трубы и вентиляция
+            for (let i = 0; i < 15; i++) {
+                createPipes(
+                    Math.random() * 80 - 40,
+                    3,
+                    Math.random() * 80 - 40
+                );
+            }
+            
+            // Комплекс Лямбда
+            createLambdaComplex(40, 0, -30);
         }
         
-        // Создание здания
-        function createBuilding(x, y, z, width, height, depth) {
-            const geometry = new THREE.BoxGeometry(width, height, depth);
+        // Создание лабораторного коридора
+        function createLabCorridor(x, y, z) {
+            const corridorGroup = new THREE.Group();
             
-            // Случайный цвет здания
-            const colors = [0x888888, 0x777777, 0x666666, 0x555555];
-            const material = new THREE.MeshStandardMaterial({ 
-                color: colors[Math.floor(Math.random() * colors.length)],
-                roughness: 0.8,
-                metalness: 0.2
-            });
-            
-            const building = new THREE.Mesh(geometry, material);
-            building.position.set(x, y + height/2, z);
-            building.castShadow = true;
-            building.receiveShadow = true;
-            scene.add(building);
-            
-            // Окна
-            const windowMaterial = new THREE.MeshBasicMaterial({ 
-                color: 0x2244aa,
-                transparent: true,
-                opacity: 0.7
-            });
-            
-            for (let i = 0; i < Math.floor(height/3); i++) {
-                for (let j = 0; j < 2; j++) {
-                    const windowGeometry = new THREE.PlaneGeometry(2, 1);
-                    const windowMesh = new THREE.Mesh(windowGeometry, windowMaterial);
-                    
-                    const offsetX = (j === 0 ? -1 : 1) * (width/2 - 0.5);
-                    windowMesh.position.set(
-                        x + offsetX,
-                        y + 2 + i * 3,
-                        z + (Math.random() > 0.5 ? depth/2 - 0.1 : -depth/2 + 0.1)
-                    );
-                    
-                    windowMesh.rotation.y = j === 0 ? Math.PI : 0;
-                    scene.add(windowMesh);
-                }
-            }
-        }
-        
-        // Создание баррикады
-        function createBarricade(x, y, z) {
-            const barricadeGroup = new THREE.Group();
-            
-            // Основные элементы
-            for (let i = 0; i < 5; i++) {
-                const height = Math.random() * 2 + 1;
-                const width = Math.random() * 0.5 + 0.3;
-                const depth = Math.random() * 0.5 + 0.3;
-                
-                const geometry = new THREE.BoxGeometry(width, height, depth);
-                const material = new THREE.MeshStandardMaterial({ 
-                    color: 0x8B4513,
-                    roughness: 0.9
-                });
-                
-                const barricadePart = new THREE.Mesh(geometry, material);
-                barricadePart.position.set(
-                    x + (i - 2) * 0.7,
-                    y + height/2,
-                    z
-                );
-                
-                barricadePart.castShadow = true;
-                barricadeGroup.add(barricadePart);
-            }
-            
-            // Колючая проволока
-            const wireGeometry = new THREE.CylinderGeometry(0.05, 0.05, 5);
-            const wireMaterial = new THREE.MeshStandardMaterial({ color: 0xcccccc });
-            
-            for (let i = 0; i < 3; i++) {
-                const wire = new THREE.Mesh(wireGeometry, wireMaterial);
-                wire.position.set(
-                    x,
-                    y + 1.5 + i * 0.5,
-                    z
-                );
-                wire.rotation.z = Math.PI / 2;
-                barricadeGroup.add(wire);
-            }
-            
-            scene.add(barricadeGroup);
-        }
-        
-        // Создание обломков
-        function createDebris(x, y, z) {
-            const debrisGroup = new THREE.Group();
-            
-            // Типы обломков
-            const debrisTypes = [
-                { type: 'box', size: [0.5, 0.2, 1.0] },
-                { type: 'cylinder', size: [0.3, 0.3, 0.8] },
-                { type: 'sphere', size: [0.4, 0.4, 0.4] }
-            ];
-            
-            const debrisType = debrisTypes[Math.floor(Math.random() * debrisTypes.length)];
-            let geometry;
-            
-            if (debrisType.type === 'box') {
-                geometry = new THREE.BoxGeometry(...debrisType.size);
-            } else if (debrisType.type === 'cylinder') {
-                geometry = new THREE.CylinderGeometry(
-                    debrisType.size[0], 
-                    debrisType.size[1], 
-                    debrisType.size[2]
-                );
-            } else {
-                geometry = new THREE.SphereGeometry(debrisType.size[0]);
-            }
-            
-            const material = new THREE.MeshStandardMaterial({ 
-                color: 0x777777,
+            // Стены
+            const wallMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x606060,
                 roughness: 0.8
             });
             
-            const debris = new THREE.Mesh(geometry, material);
-            debris.position.set(x, y, z);
-            debris.rotation.set(
-                Math.random() * Math.PI,
-                Math.random() * Math.PI,
-                Math.random() * Math.PI
-            );
+            for (let i = 0; i < 4; i++) {
+                const wallGeometry = new THREE.BoxGeometry(10, 5, 1);
+                const wall = new THREE.Mesh(wallGeometry, wallMaterial);
+                
+                const angle = i * Math.PI / 2;
+                wall.position.set(
+                    x + 5 * Math.cos(angle),
+                    y + 2.5,
+                    z + 5 * Math.sin(angle)
+                );
+                
+                wall.rotation.y = angle;
+                wall.castShadow = true;
+                corridorGroup.add(wall);
+            }
             
-            debris.castShadow = true;
-            debrisGroup.add(debris);
-            scene.add(debrisGroup);
+            // Пол
+            const floorGeometry = new THREE.BoxGeometry(8, 0.2, 8);
+            const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x444444 });
+            const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+            floor.position.set(x, y, z);
+            corridorGroup.add(floor);
+            
+            scene.add(corridorGroup);
         }
         
-        // Создание контрольной точки
-        function createCheckpoint(x, y, z) {
-            const checkpointGroup = new THREE.Group();
+        // Создание лабораторного оборудования
+        function createLabEquipment(x, y, z) {
+            const equipmentGroup = new THREE.Group();
+            
+            // Типы оборудования
+            const equipmentTypes = [
+                { type: 'console', size: [1.5, 1, 0.8], color: 0x333333 },
+                { type: 'monitor', size: [0.8, 0.6, 0.1], color: 0x111111 },
+                { type: 'server', size: [0.6, 1.2, 0.6], color: 0x222222 },
+                { type: 'device', size: [0.4, 0.4, 0.4], color: 0x444444 }
+            ];
+            
+            const type = equipmentTypes[Math.floor(Math.random() * equipmentTypes.length)];
+            const geometry = new THREE.BoxGeometry(...type.size);
+            const material = new THREE.MeshStandardMaterial({ color: type.color });
+            const equipment = new THREE.Mesh(geometry, material);
+            
+            equipment.position.set(x, y + type.size[1]/2, z);
+            equipment.rotation.y = Math.random() * Math.PI;
+            equipment.castShadow = true;
+            equipmentGroup.add(equipment);
+            
+            // Экран монитора
+            if (type.type === 'monitor') {
+                const screenGeometry = new THREE.PlaneGeometry(type.size[0]*0.8, type.size[1]*0.8);
+                const screenMaterial = new THREE.MeshBasicMaterial({ 
+                    color: 0x00ff00,
+                    emissive: 0x00aa00,
+                    side: THREE.DoubleSide
+                });
+                const screen = new THREE.Mesh(screenGeometry, screenMaterial);
+                screen.position.set(0, 0, type.size[2]/2 + 0.01);
+                equipment.add(screen);
+            }
+            
+            scene.add(equipmentGroup);
+        }
+        
+        // Создание труб
+        function createPipes(x, y, z) {
+            const pipeGroup = new THREE.Group();
+            
+            const pipeMaterial = new THREE.MeshStandardMaterial({ color: 0x808080 });
+            
+            // Вертикальные трубы
+            for (let i = 0; i < 3; i++) {
+                const pipeGeometry = new THREE.CylinderGeometry(0.2, 0.2, 4, 16);
+                const pipe = new THREE.Mesh(pipeGeometry, pipeMaterial);
+                pipe.position.set(
+                    x + (i - 1) * 1.5,
+                    y + 2,
+                    z
+                );
+                pipe.castShadow = true;
+                pipeGroup.add(pipe);
+            }
+            
+            // Горизонтальные соединения
+            const connectorGeometry = new THREE.CylinderGeometry(0.2, 0.2, 3, 16);
+            const connector = new THREE.Mesh(connectorGeometry, pipeMaterial);
+            connector.position.set(x, y + 4, z);
+            connector.rotation.z = Math.PI / 2;
+            connector.castShadow = true;
+            pipeGroup.add(connector);
+            
+            scene.add(pipeGroup);
+        }
+        
+        // Создание комплекса Лямбда
+        function createLambdaComplex(x, y, z) {
+            const lambdaGroup = new THREE.Group();
             
             // Основание
-            const baseGeometry = new THREE.CylinderGeometry(3, 3, 1, 32);
+            const baseGeometry = new THREE.BoxGeometry(15, 2, 15);
             const baseMaterial = new THREE.MeshStandardMaterial({ color: 0x333333 });
             const base = new THREE.Mesh(baseGeometry, baseMaterial);
-            base.position.set(x, y + 0.5, z);
-            checkpointGroup.add(base);
+            base.position.set(x, y + 1, z);
+            lambdaGroup.add(base);
             
-            // Столб
-            const poleGeometry = new THREE.CylinderGeometry(0.3, 0.3, 8, 16);
-            const poleMaterial = new THREE.MeshStandardMaterial({ color: 0x555555 });
-            const pole = new THREE.Mesh(poleGeometry, poleMaterial);
-            pole.position.set(x, y + 4.5, z);
-            checkpointGroup.add(pole);
+            // Основная структура
+            const mainGeometry = new THREE.CylinderGeometry(5, 7, 20, 6);
+            const mainMaterial = new THREE.MeshStandardMaterial({ color: 0x444444 });
+            const main = new THREE.Mesh(mainGeometry, mainMaterial);
+            main.position.set(x, y + 12, z);
+            lambdaGroup.add(main);
             
-            // Знак
-            const signGeometry = new THREE.BoxGeometry(2, 1, 0.1);
-            const signMaterial = new THREE.MeshStandardMaterial({ 
-                color: 0xff4500,
-                emissive: 0xff4500,
-                emissiveIntensity: 0.5
+            // Лямбда-символ
+            const lambdaGeometry = new THREE.BoxGeometry(6, 1, 0.5);
+            const lambdaMaterial = new THREE.MeshBasicMaterial({ 
+                color: 0xffff00,
+                emissive: 0xffaa00,
+                emissiveIntensity: 0.8
             });
-            const sign = new THREE.Mesh(signGeometry, signMaterial);
-            sign.position.set(x, y + 7, z);
-            checkpointGroup.add(sign);
+            const lambda = new THREE.Mesh(lambdaGeometry, lambdaMaterial);
+            lambda.position.set(x, y + 18, z + 5.1);
+            lambda.rotation.x = Math.PI / 4;
+            lambdaGroup.add(lambda);
             
             // Свет
-            const light = new THREE.PointLight(0xff4500, 1, 15);
-            light.position.set(x, y + 7, z);
+            const light = new THREE.PointLight(0xffff00, 1, 30);
+            light.position.set(x, y + 18, z + 5);
             scene.add(light);
             
-            scene.add(checkpointGroup);
+            scene.add(lambdaGroup);
         }
         
         // Инициализация управления от первого лица
@@ -588,6 +582,13 @@
                     if (keys['KeyD']) {
                         controls.moveRight(moveSpeed);
                     }
+                    if (keys['Space']) {
+                        // Простой прыжок
+                        camera.position.y += 0.2;
+                        setTimeout(() => {
+                            camera.position.y -= 0.2;
+                        }, 300);
+                    }
                 }
                 
                 requestAnimationFrame(updatePlayerMovement);
@@ -606,8 +607,21 @@
                 enemies.push({
                     type: type,
                     position: { x: x, y: 0, z: z },
-                    health: type === 'elite' ? 100 : 75,
+                    health: type === 'hgrunt' ? 100 : 75,
                     detectedPlayer: false
+                });
+            }
+        }
+        
+        // Создание учёных
+        function createScientists() {
+            for (let i = 0; i < 5; i++) {
+                const x = Math.random() * 60 - 30;
+                const z = Math.random() * 60 - 30;
+                
+                scientists.push({
+                    position: { x: x, y: 0, z: z },
+                    state: 'idle' // idle, scared, dead
                 });
             }
         }
@@ -633,16 +647,38 @@
                     
                     // Случайная атака
                     if (Math.random() < 0.01 && distance < 20) {
-                        playerHealth -= enemy.type === 'elite' ? 15 : 10;
+                        playerHealth -= enemy.type === 'hgrunt' ? 15 : 10;
                         updateHealthBar();
                         
                         if (playerHealth <= 0) {
-                            showHudMessage("ВЫ УМЕРЛИ", 3000);
+                            showHudMessage("YOU ARE DEAD", 3000);
                             resetPlayer();
                         }
                     }
                 } else {
                     enemy.detectedPlayer = false;
+                }
+            });
+        }
+        
+        // Обновление учёных
+        function updateScientists() {
+            const playerPos = camera.position;
+            
+            scientists.forEach((scientist, index) => {
+                const dx = playerPos.x - scientist.position.x;
+                const dz = playerPos.z - scientist.position.z;
+                const distance = Math.sqrt(dx * dx + dz * dz);
+                
+                if (distance < 15 && scientist.state === 'idle') {
+                    // Учёный замечает игрока
+                    scientist.state = 'scared';
+                    
+                    if (Math.random() > 0.5) {
+                        showHudMessage("HELP ME!", 2000);
+                    } else {
+                        showHudMessage("IT'S FREEMAN!", 2000);
+                    }
                 }
             });
         }
@@ -691,9 +727,6 @@
                 document.getElementById('uiContainer').removeChild(muzzleFlash);
             }, 50);
             
-            // Звук выстрела
-            playSound('shoot');
-            
             // Проверка попадания
             checkHit();
         }
@@ -713,46 +746,46 @@
                     hit = true;
                     
                     if (enemy.health <= 0) {
-                        showHudMessage("ВРАГ УНИЧТОЖЕН", 1500);
+                        showHudMessage("TARGET NEUTRALIZED", 1500);
                         enemies.splice(index, 1);
                     }
                 }
             });
-            
-            if (hit) {
-                playSound('hit');
-            }
-        }
-        
-        // Воспроизведение звука
-        function playSound(type) {
-            // В реальной игре здесь было бы воспроизведение звуковых файлов
-            // Для демонстрации просто выводим в консоль
-            console.log(`Sound played: ${type}`);
         }
         
         // Обработчик клавиш
         function onKeyDown(event) {
             if (event.code === 'KeyR') {
                 // Перезарядка
-                ammoCount.textContent = WEAPONS.pistol.ammo;
-                showHudMessage("ПЕРЕЗАРЯДКА", 1000);
+                if (currentWeapon !== 'crowbar') {
+                    ammoCount.textContent = WEAPONS[currentWeapon].ammo;
+                    showHudMessage("RELOADING", 1000);
+                }
             }
             else if (event.code === 'Digit1') {
                 // Смена оружия
-                ammoCount.textContent = WEAPONS.gravity.ammo;
-                document.querySelector('.weapon-name').textContent = WEAPONS.gravity.name;
-                gravityGunActive = true;
+                currentWeapon = 'crowbar';
+                ammoCount.textContent = WEAPONS.crowbar.ammo;
+                document.querySelector('.weapon-name').textContent = WEAPONS.crowbar.name;
+                document.querySelector('.weapon-icon').textContent = 'C';
             }
             else if (event.code === 'Digit2') {
-                ammoCount.textContent = WEAPONS.pistol.ammo;
-                document.querySelector('.weapon-name').textContent = WEAPONS.pistol.name;
-                gravityGunActive = false;
+                currentWeapon = 'glock';
+                ammoCount.textContent = WEAPONS.glock.ammo;
+                document.querySelector('.weapon-name').textContent = WEAPONS.glock.name;
+                document.querySelector('.weapon-icon').textContent = '9';
             }
             else if (event.code === 'Digit3') {
+                currentWeapon = 'shotgun';
                 ammoCount.textContent = WEAPONS.shotgun.ammo;
                 document.querySelector('.weapon-name').textContent = WEAPONS.shotgun.name;
-                gravityGunActive = false;
+                document.querySelector('.weapon-icon').textContent = 'S';
+            }
+            else if (event.code === 'Digit4') {
+                currentWeapon = 'crossbow';
+                ammoCount.textContent = WEAPONS.crossbow.ammo;
+                document.querySelector('.weapon-name').textContent = WEAPONS.crossbow.name;
+                document.querySelector('.weapon-icon').textContent = 'X';
             }
         }
         
@@ -767,18 +800,19 @@
         function animate() {
             requestAnimationFrame(animate);
             
-            // Обновление врагов
+            // Обновление врагов и учёных
             if (gameStarted) {
                 updateEnemies();
+                updateScientists();
                 
-                // Проверка достижения контрольной точки
+                // Проверка достижения комплекса Лямбда
                 const playerPos = camera.position;
                 const dx = playerPos.x - 40;
                 const dz = playerPos.z - (-30);
                 const distance = Math.sqrt(dx * dx + dz * dz);
                 
                 if (distance < 5) {
-                    showHudMessage("МИССИЯ ВЫПОЛНЕНА", 5000);
+                    showHudMessage("LAMBDA COMPLEX REACHED", 5000);
                 }
             }
             
@@ -790,7 +824,7 @@
             startScreen.style.display = 'none';
             gameStarted = true;
             initGame();
-            showHudMessage("ПРЕДУПРЕЖДЕНИЕ: СОЛДАТЫ АЛЬЯНСА ОБНАРУЖЕНЫ", 3000);
+            showHudMessage("WARNING: RESONANCE CASCADE DETECTED", 3000);
         });
     </script>
 </body>
