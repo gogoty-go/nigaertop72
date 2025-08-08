@@ -3,634 +3,286 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Процедурный Мир: Адаптивное Приключение</title>
+    <title>Half-Life 2 Browser Experience</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/PointerLockControls.min.js"></script>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         
         body {
             overflow: hidden;
-            background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
-            color: #e6e6e6;
+            background: #000;
+            font-family: 'Arial', sans-serif;
+            color: #e0e0e0;
             height: 100vh;
             display: flex;
             flex-direction: column;
+            cursor: none;
         }
         
-        header {
-            background: rgba(10, 15, 30, 0.85);
-            padding: 15px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 2px solid #4cc9f0;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
-            z-index: 10;
-        }
-        
-        .logo {
-            font-size: 1.8rem;
-            font-weight: 700;
-            background: linear-gradient(45deg, #4cc9f0, #4361ee);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-shadow: 0 0 10px rgba(76, 201, 240, 0.3);
-        }
-        
-        .player-stats {
-            display: flex;
-            gap: 25px;
-        }
-        
-        .stat {
-            background: rgba(25, 35, 65, 0.7);
-            padding: 8px 15px;
-            border-radius: 20px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            border: 1px solid #4361ee;
-        }
-        
-        .stat-icon {
-            font-size: 1.2rem;
-            color: #4cc9f0;
-        }
-        
-        .game-container {
-            flex: 1;
-            display: flex;
+        #gameContainer {
             position: relative;
+            width: 100%;
+            height: 100%;
         }
         
         #gameCanvas {
-            width: 100%;
-            height: 100%;
-            position: absolute;
-            top: 0;
-            left: 0;
-        }
-        
-        .ui-overlay {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            right: 20px;
-            display: flex;
-            justify-content: space-between;
-            z-index: 5;
-        }
-        
-        .controls {
-            background: rgba(10, 15, 30, 0.85);
-            padding: 15px;
-            border-radius: 15px;
-            width: 300px;
-            border: 1px solid #4361ee;
-            box-shadow: 0 0 20px rgba(67, 97, 238, 0.3);
-        }
-        
-        .control-group {
-            margin-bottom: 15px;
-        }
-        
-        .control-group h3 {
-            margin-bottom: 10px;
-            color: #4cc9f0;
-            font-size: 1.1rem;
-        }
-        
-        .btn {
-            background: linear-gradient(45deg, #4361ee, #3a0ca3);
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            margin-right: 8px;
-            margin-bottom: 8px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-        }
-        
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 15px rgba(67, 97, 238, 0.5);
-        }
-        
-        .btn:active {
-            transform: translateY(1px);
-        }
-        
-        .quest-panel {
-            background: rgba(10, 15, 30, 0.9);
-            padding: 20px;
-            border-radius: 15px;
-            width: 350px;
-            max-height: 300px;
-            overflow-y: auto;
-            border: 1px solid #f72585;
-            box-shadow: 0 0 20px rgba(247, 37, 133, 0.3);
-        }
-        
-        .quest-title {
-            color: #f72585;
-            margin-bottom: 15px;
-            font-size: 1.3rem;
-            border-bottom: 1px solid #f72585;
-            padding-bottom: 8px;
-        }
-        
-        .quest-description {
-            line-height: 1.6;
-            margin-bottom: 15px;
-        }
-        
-        .choices {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        
-        .choice-btn {
-            background: rgba(67, 97, 238, 0.2);
-            border: 1px solid #4361ee;
-            color: #e6e6e6;
-            padding: 10px;
-            border-radius: 8px;
-            cursor: pointer;
-            text-align: left;
-            transition: all 0.2s ease;
-        }
-        
-        .choice-btn:hover {
-            background: rgba(67, 97, 238, 0.4);
-            transform: translateX(5px);
-        }
-        
-        .world-info {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(10, 15, 30, 0.85);
-            padding: 15px;
-            border-radius: 15px;
-            width: 250px;
-            border: 1px solid #7209b7;
-            box-shadow: 0 0 20px rgba(114, 9, 183, 0.3);
-        }
-        
-        .world-title {
-            color: #7209b7;
-            margin-bottom: 10px;
-            text-align: center;
-            font-size: 1.2rem;
-        }
-        
-        .world-features {
-            list-style-type: none;
-        }
-        
-        .world-features li {
-            padding: 8px 0;
-            border-bottom: 1px dashed #3a0ca3;
-            display: flex;
-            align-items: center;
-        }
-        
-        .world-features li:before {
-            content: "•";
-            color: #4cc9f0;
-            font-weight: bold;
-            margin-right: 10px;
-        }
-        
-        .loading-screen {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: linear-gradient(135deg, #0f3460, #1a1a2e);
+        }
+        
+        #uiContainer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+        
+        .health-bar {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            width: 200px;
+            height: 25px;
+            background: rgba(50, 50, 50, 0.7);
+            border: 2px solid #333;
+        }
+        
+        .health-fill {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(90deg, #f00, #ff4500);
+            transition: width 0.3s;
+        }
+        
+        .weapon-info {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            text-align: right;
+        }
+        
+        .weapon-name {
+            font-size: 24px;
+            color: #ffa500;
+            text-shadow: 0 0 5px #000;
+            margin-bottom: 5px;
+        }
+        
+        .ammo-count {
+            font-size: 28px;
+            color: #fff;
+            text-shadow: 0 0 5px #000;
+        }
+        
+        .crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 6px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid #000;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+        
+        .start-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(rgba(0, 10, 20, 0.9), rgba(0, 30, 50, 0.8)), 
+                        url('https://i.imgur.com/5QzC2bW.png') center/cover;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            z-index: 100;
-            transition: opacity 1s ease;
+            z-index: 20;
         }
         
-        .loading-title {
-            font-size: 2.5rem;
+        .logo {
+            font-size: 72px;
+            font-weight: bold;
+            color: #ffa500;
+            text-shadow: 0 0 10px rgba(255, 165, 0, 0.5);
             margin-bottom: 30px;
-            background: linear-gradient(45deg, #4cc9f0, #f72585);
+            letter-spacing: 2px;
+            background: linear-gradient(45deg, #ffa500, #ff8c00, #ff4500);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
         
-        .progress-container {
-            width: 60%;
-            max-width: 500px;
-            height: 20px;
-            background: rgba(25, 35, 65, 0.7);
-            border-radius: 10px;
-            overflow: hidden;
-            border: 1px solid #4361ee;
+        .start-btn {
+            background: linear-gradient(45deg, #ff8c00, #ff4500);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 24px;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-top: 30px;
+            transition: all 0.3s;
+            box-shadow: 0 0 15px rgba(255, 140, 0, 0.5);
+            pointer-events: auto;
         }
         
-        .progress-bar {
-            height: 100%;
-            background: linear-gradient(90deg, #4361ee, #3a0ca3, #f72585);
-            width: 0%;
-            transition: width 0.5s ease;
+        .start-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 25px rgba(255, 140, 0, 0.8);
         }
         
-        .loading-text {
-            margin-top: 20px;
-            font-size: 1.2rem;
-            color: #4cc9f0;
+        .start-btn:active {
+            transform: scale(0.95);
         }
         
-        .tip {
-            position: absolute;
-            bottom: 20%;
-            font-style: italic;
-            color: rgba(255, 255, 255, 0.6);
-            text-align: center;
-            width: 80%;
-        }
-        
-        .mini-map {
+        .game-overlay {
             position: absolute;
             top: 20px;
             left: 20px;
-            width: 150px;
-            height: 150px;
-            background: rgba(10, 15, 30, 0.7);
-            border: 2px solid #4cc9f0;
-            border-radius: 10px;
-            z-index: 5;
-            overflow: hidden;
+            background: rgba(20, 20, 30, 0.7);
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #ffa500;
+            max-width: 400px;
         }
         
-        .player-marker {
+        .objective {
+            font-size: 18px;
+            margin-bottom: 10px;
+            color: #ffa500;
+        }
+        
+        .objective-text {
+            line-height: 1.5;
+        }
+        
+        .hud-message {
             position: absolute;
-            width: 8px;
-            height: 8px;
-            background: #f72585;
-            border-radius: 50%;
+            top: 50%;
+            left: 50%;
             transform: translate(-50%, -50%);
-            box-shadow: 0 0 10px #f72585;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px 30px;
+            border-radius: 5px;
+            border: 2px solid #ffa500;
+            font-size: 24px;
+            color: #fff;
+            text-align: center;
+            display: none;
+            z-index: 15;
+        }
+        
+        .combine-soldier {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 0, 0, 0.3);
+            border-radius: 50%;
+            display: none;
+            pointer-events: none;
+            z-index: 5;
+        }
+        
+        #enemyRadar {
+            position: absolute;
+            bottom: 30px;
+            right: 250px;
+            width: 150px;
+            height: 150px;
+            background: rgba(0, 20, 40, 0.7);
+            border: 2px solid #ffa500;
+            border-radius: 50%;
         }
     </style>
 </head>
 <body>
-    <header>
-        <div class="logo">Процедурный Мир: Адаптивное Приключение</div>
-        <div class="player-stats">
-            <div class="stat">
-                <span class="stat-icon">❤️</span>
-                <span id="health">100</span>
-            </div>
-            <div class="stat">
-                <span class="stat-icon">⚡</span>
-                <span id="energy">80</span>
-            </div>
-            <div class="stat">
-                <span class="stat-icon">💎</span>
-                <span id="coins">50</span>
-            </div>
-            <div class="stat">
-                <span class="stat-icon">🏆</span>
-                <span id="level">1</span>
-            </div>
-        </div>
-    </header>
-    
-    <div class="game-container">
-        <div class="loading-screen" id="loadingScreen">
-            <h1 class="loading-title">ГЕНЕРАЦИЯ ВАШЕГО МИРА</h1>
-            <div class="progress-container">
-                <div class="progress-bar" id="progressBar"></div>
-            </div>
-            <div class="loading-text" id="loadingText">Инициализация ядра мира...</div>
-            <div class="tip" id="tip">Каждый мир уникален и адаптируется под ваши действия</div>
-        </div>
-        
-        <div class="mini-map" id="miniMap">
-            <div class="player-marker" id="playerMarker"></div>
-        </div>
-        
-        <div class="world-info">
-            <div class="world-title" id="worldName">Название мира</div>
-            <ul class="world-features" id="worldFeatures">
-                <li>Генерация ландшафта...</li>
-            </ul>
-        </div>
-        
+    <div id="gameContainer">
         <canvas id="gameCanvas"></canvas>
         
-        <div class="ui-overlay">
-            <div class="controls">
-                <div class="control-group">
-                    <h3>Управление</h3>
-                    <button class="btn">W: Вперед</button>
-                    <button class="btn">S: Назад</button>
-                    <button class="btn">A: Влево</button>
-                    <button class="btn">D: Вправо</button>
-                    <button class="btn">Пробел: Прыжок</button>
-                    <button class="btn">Shift: Бег</button>
-                </div>
-                <div class="control-group">
-                    <h3>Действия</h3>
-                    <button class="btn" id="interactBtn">E: Взаимодействовать</button>
-                    <button class="btn" id="inventoryBtn">I: Инвентарь</button>
-                    <button class="btn" id="mapBtn">M: Карта</button>
-                </div>
+        <div id="uiContainer">
+            <div class="health-bar">
+                <div class="health-fill" id="healthBar"></div>
             </div>
             
-            <div class="quest-panel">
-                <div class="quest-title" id="questTitle">Текущее задание</div>
-                <div class="quest-description" id="questDescription">Генерируем уникальный сюжет для вас...</div>
-                <div class="choices" id="choicesContainer">
-                    <!-- Choices will be added dynamically -->
+            <div class="weapon-info">
+                <div class="weapon-name">Гравитационная пушка</div>
+                <div class="ammo-count" id="ammoCount">∞</div>
+            </div>
+            
+            <div class="crosshair"></div>
+            
+            <div class="game-overlay">
+                <div class="objective">ЦЕЛЬ МИССИИ:</div>
+                <div class="objective-text">Доберитесь до контрольной точки на другой стороне города. Уничтожьте солдат Альянса и избегайте снайперского огня.</div>
+            </div>
+            
+            <div class="hud-message" id="hudMessage">СОЛДАТЫ АЛЬЯНСА ОБНАРУЖЕНЫ!</div>
+            
+            <div id="enemyRadar"></div>
+            
+            <div class="start-screen" id="startScreen">
+                <div class="logo">HALF-LIFE 2</div>
+                <div style="font-size: 24px; margin-bottom: 20px; text-align: center; max-width: 600px;">
+                    Город 17. Вы прибыли поездом. Вас ждет мрачный город,<br>контролируемый Альянсом. Ваша задача - выжить.
                 </div>
+                <button class="start-btn" id="startBtn">НАЧАТЬ ИГРУ</button>
             </div>
         </div>
     </div>
 
     <script>
         // Элементы интерфейса
-        const loadingScreen = document.getElementById('loadingScreen');
-        const progressBar = document.getElementById('progressBar');
-        const loadingText = document.getElementById('loadingText');
-        const tip = document.getElementById('tip');
-        const worldName = document.getElementById('worldName');
-        const worldFeatures = document.getElementById('worldFeatures');
-        const questTitle = document.getElementById('questTitle');
-        const questDescription = document.getElementById('questDescription');
-        const choicesContainer = document.getElementById('choicesContainer');
-        const healthEl = document.getElementById('health');
-        const energyEl = document.getElementById('energy');
-        const coinsEl = document.getElementById('coins');
-        const levelEl = document.getElementById('level');
+        const startScreen = document.getElementById('startScreen');
+        const startBtn = document.getElementById('startBtn');
+        const healthBar = document.getElementById('healthBar');
+        const ammoCount = document.getElementById('ammoCount');
+        const hudMessage = document.getElementById('hudMessage');
         
         // Игровые переменные
-        let playerName = "Искатель";
-        let playerTraits = {
-            courage: 5,
-            wisdom: 5,
-            compassion: 5
-        };
-        
-        // Генерация уникального имени мира
-        const worldPrefixes = ["Таинственные", "Забытые", "Древние", "Вечные", "Потерянные"];
-        const worldSuffixes = ["Земли", "Пустоши", "Леса", "Горы", "Долины", "Острова"];
-        const worldNames = ["Элдория", "Астралия", "Нексус", "Зефирия", "Ксанаду", "Аркания"];
-        
-        // Типы биомов
-        const biomes = [
-            { name: "Лес", color: 0x4caf50, features: ["Деревья", "Ручей", "Поляна"] },
-            { name: "Горы", color: 0x9e9e9e, features: ["Скалы", "Пещеры", "Обрыв"] },
-            { name: "Пустыня", color: 0xffeb3b, features: ["Дюны", "Оазис", "Кактусы"] },
-            { name: "Тундра", color: 0xbbdefb, features: ["Снег", "Лед", "Холмы"] },
-            { name: "Болото", color: 0x795548, features: ["Трясина", "Грибы", "Туман"] }
-        ];
-        
-        // Случайные советы
-        const tips = [
-            "Ваши решения влияют на развитие сюжета и окружающий мир",
-            "Исследуйте каждую локацию - вы можете найти полезные предметы",
-            "Взаимодействуйте с персонажами, чтобы получить задания",
-            "Темное время суток может быть опасным - будьте осторожны",
-            "Некоторые области мира открываются только после выполнения заданий"
-        ];
+        let playerHealth = 100;
+        let gameStarted = false;
+        let gravityGunActive = false;
+        let enemies = [];
         
         // Инициализация Three.js
         let scene, camera, renderer, controls;
+        let objects = [];
+        let raycaster, mouse;
         
-        // Игровые объекты
-        let terrain, player, objects = [];
+        // Константы игры
+        const ENEMY_TYPES = ['soldier', 'elite', 'zombie'];
+        const WEAPONS = {
+            gravity: { name: 'Гравитационная пушка', ammo: '∞' },
+            pistol: { name: 'Пистолет', ammo: 12 },
+            shotgun: { name: 'Дробовик', ammo: 6 }
+        };
         
         // Инициализация игры
         function initGame() {
-            // Генерация имени игрока
-            playerName = generatePlayerName();
-            
-            // Генерация мира
-            const generatedWorldName = generateWorldName();
-            worldName.textContent = generatedWorldName;
-            
-            // Обновление текстов загрузки
-            simulateLoading();
-        }
-        
-        // Симуляция загрузки
-        function simulateLoading() {
-            let progress = 0;
-            const steps = [
-                "Инициализация ядра мира...",
-                "Генерация ландшафта...",
-                "Создание биомов...",
-                "Расстановка объектов...",
-                "Формирование сюжета...",
-                "Настройка персонажей...",
-                "Создание динамических событий..."
-            ];
-            
-            const interval = setInterval(() => {
-                progress += Math.random() * 15;
-                if (progress > 100) progress = 100;
-                
-                progressBar.style.width = `${progress}%`;
-                
-                if (progress < 25) {
-                    loadingText.textContent = steps[0];
-                } else if (progress < 40) {
-                    loadingText.textContent = steps[1];
-                } else if (progress < 55) {
-                    loadingText.textContent = steps[2];
-                } else if (progress < 70) {
-                    loadingText.textContent = steps[3];
-                } else if (progress < 85) {
-                    loadingText.textContent = steps[4];
-                } else {
-                    loadingText.textContent = steps[5];
-                }
-                
-                // Случайный совет
-                if (Math.random() > 0.7) {
-                    tip.textContent = tips[Math.floor(Math.random() * tips.length)];
-                }
-                
-                if (progress >= 100) {
-                    clearInterval(interval);
-                    setTimeout(() => {
-                        loadingScreen.style.opacity = "0";
-                        setTimeout(() => {
-                            loadingScreen.style.display = "none";
-                            initThreeJS();
-                            generateWorldFeatures();
-                            generateInitialQuest();
-                        }, 1000);
-                    }, 500);
-                }
-            }, 300);
-        }
-        
-        // Генерация имени игрока
-        function generatePlayerName() {
-            const prefixes = ["Смелый", "Мудрый", "Отважный", "Хитрый", "Благородный"];
-            const names = ["Арагорн", "Гендальф", "Леголас", "Гимли", "Фродо", "Галадриэль"];
-            return `${prefixes[Math.floor(Math.random() * prefixes.length)]} ${names[Math.floor(Math.random() * names.length)]}`;
-        }
-        
-        // Генерация названия мира
-        function generateWorldName() {
-            const prefix = worldPrefixes[Math.floor(Math.random() * worldPrefixes.length)];
-            const suffix = worldSuffixes[Math.floor(Math.random() * worldSuffixes.length)];
-            const name = worldNames[Math.floor(Math.random() * worldNames.length)];
-            return `${prefix} ${suffix} ${name}`;
-        }
-        
-        // Генерация характеристик мира
-        function generateWorldFeatures() {
-            worldFeatures.innerHTML = "";
-            
-            // Количество особенностей
-            const featureCount = 4 + Math.floor(Math.random() * 3);
-            
-            // Случайные биомы
-            const selectedBiomes = [];
-            while (selectedBiomes.length < 3) {
-                const biome = biomes[Math.floor(Math.random() * biomes.length)];
-                if (!selectedBiomes.includes(biome)) {
-                    selectedBiomes.push(biome);
-                    
-                    const li = document.createElement("li");
-                    li.textContent = `${biome.name}: ${biome.features[Math.floor(Math.random() * biome.features.length)]}`;
-                    worldFeatures.appendChild(li);
-                }
-            }
-            
-            // Дополнительные особенности
-            const specialFeatures = [
-                "Плавающие острова",
-                "Кристальные пещеры",
-                "Древние руины",
-                "Зачарованный лес",
-                "Вулканические поля",
-                "Подземные города"
-            ];
-            
-            for (let i = 0; i < featureCount - 3; i++) {
-                const feature = specialFeatures[Math.floor(Math.random() * specialFeatures.length)];
-                const li = document.createElement("li");
-                li.textContent = feature;
-                worldFeatures.appendChild(li);
-            }
-            
-            // Уникальная особенность
-            const uniqueFeatures = [
-                "Портал в другое измерение",
-                "Древо жизни",
-                "Город в небе",
-                "Озеро времени",
-                "Магический водопад"
-            ];
-            const li = document.createElement("li");
-            li.innerHTML = `<strong>Уникально: ${uniqueFeatures[Math.floor(Math.random() * uniqueFeatures.length)]}</strong>`;
-            worldFeatures.appendChild(li);
-        }
-        
-        // Генерация начального задания
-        function generateInitialQuest() {
-            const questTypes = [
-                {
-                    title: "Потерянные реликвии",
-                    description: "Старейшина деревни просит вас найти древние артефакты, разбросанные по окрестностям. Без них деревня не сможет защититься от надвигающейся угрозы.",
-                    choices: [
-                        "Согласиться помочь деревне",
-                        "Попросить награду вперед",
-                        "Отказаться, сказав что у вас свои дела"
-                    ]
-                },
-                {
-                    title: "Таинственное исчезновение",
-                    description: "Жители обеспокоены пропажей нескольких человек в окрестностях темного леса. Местный охотник видел странные огни в ночи и слышал жуткие звуки.",
-                    choices: [
-                        "Исследовать темный лес",
-                        "Расспросить жителей подробнее",
-                        "Предложить нанять профессиональных ищеек"
-                    ]
-                },
-                {
-                    title: "Нарушенный баланс",
-                    description: "Природа вокруг ведет себя странно - реки меняют течение, растения растут не по сезону. Друид просит вас найти источник магического дисбаланса.",
-                    choices: [
-                        "Помочь восстановить баланс",
-                        "Попросить магический артефакт для помощи",
-                        "Предложить друиду разобраться самому"
-                    ]
-                }
-            ];
-            
-            const quest = questTypes[Math.floor(Math.random() * questTypes.length)];
-            
-            questTitle.textContent = quest.title;
-            questDescription.textContent = quest.description;
-            
-            // Очистка предыдущих выборов
-            choicesContainer.innerHTML = "";
-            
-            // Добавление новых выборов
-            quest.choices.forEach((choice, index) => {
-                const button = document.createElement("button");
-                button.className = "choice-btn";
-                button.textContent = choice;
-                button.addEventListener("click", () => handleChoice(index));
-                choicesContainer.appendChild(button);
-            });
-        }
-        
-        // Обработка выбора игрока
-        function handleChoice(choiceIndex) {
-            // Влияние на характеристики игрока
-            if (choiceIndex === 0) {
-                playerTraits.courage += 2;
-                playerTraits.compassion += 1;
-            } else if (choiceIndex === 1) {
-                playerTraits.wisdom += 1;
-                coinsEl.textContent = parseInt(coinsEl.textContent) + 20;
-            } else {
-                playerTraits.courage -= 1;
-            }
-            
-            // Обновление статистики
-            healthEl.textContent = Math.max(0, 100 - Math.floor(Math.random() * 10));
-            energyEl.textContent = Math.max(0, parseInt(energyEl.textContent) - 15);
-            
-            // Генерация нового задания
-            setTimeout(generateInitialQuest, 1500);
-        }
-        
-        // Инициализация Three.js
-        function initThreeJS() {
             // Создание сцены
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x87CEEB);
-            scene.fog = new THREE.Fog(0x87CEEB, 20, 100);
+            scene.background = new THREE.Color(0x445566);
+            scene.fog = new THREE.Fog(0x445566, 20, 100);
             
             // Создание камеры
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(0, 10, 20);
+            camera.position.set(0, 2, 0);
             
             // Создание рендерера
             renderer = new THREE.WebGLRenderer({ 
@@ -640,224 +292,505 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.shadowMap.enabled = true;
             
-            // Орбитальный контроль (для демонстрации)
-            controls = new THREE.OrbitControls(camera, renderer.domElement);
-            controls.enableDamping = true;
-            controls.dampingFactor = 0.05;
-            
             // Освещение
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            const ambientLight = new THREE.AmbientLight(0x444444);
             scene.add(ambientLight);
             
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-            directionalLight.position.set(20, 30, 20);
+            const directionalLight = new THREE.DirectionalLight(0xffeecc, 0.8);
+            directionalLight.position.set(10, 20, 10);
             directionalLight.castShadow = true;
-            directionalLight.shadow.mapSize.width = 1024;
-            directionalLight.shadow.mapSize.height = 1024;
             scene.add(directionalLight);
             
-            // Создание земли
-            const groundGeometry = new THREE.PlaneGeometry(100, 100, 50, 50);
-            const groundMaterial = new THREE.MeshStandardMaterial({ 
-                color: 0x3d8b40,
-                wireframe: false
-            });
-            terrain = new THREE.Mesh(groundGeometry, groundMaterial);
-            terrain.rotation.x = -Math.PI / 2;
-            terrain.receiveShadow = true;
-            scene.add(terrain);
+            // Создание мира
+            createCityEnvironment();
             
-            // Создание воды
-            const waterGeometry = new THREE.PlaneGeometry(40, 40);
-            const waterMaterial = new THREE.MeshStandardMaterial({
-                color: 0x0077be,
-                transparent: true,
-                opacity: 0.7,
-                metalness: 0.8,
-                roughness: 0.1
-            });
-            const water = new THREE.Mesh(waterGeometry, waterMaterial);
-            water.rotation.x = -Math.PI / 2;
-            water.position.y = 0.1;
-            water.position.x = -20;
-            water.position.z = -20;
-            scene.add(water);
+            // Создание ракурса от первого лица
+            initFPSControls();
             
-            // Добавление деревьев
-            for (let i = 0; i < 30; i++) {
-                addTree(
-                    Math.random() * 80 - 40,
-                    0,
-                    Math.random() * 80 - 40
-                );
-            }
-            
-            // Добавление камней
-            for (let i = 0; i < 20; i++) {
-                addRock(
-                    Math.random() * 80 - 40,
-                    0,
-                    Math.random() * 80 - 40
-                );
-            }
-            
-            // Добавление здания
-            addBuilding(-30, 0, 30);
+            // Создание врагов
+            createEnemies();
             
             // Запуск анимации
             animate();
             
-            // Обработка изменения размера окна
+            // Обработка событий
             window.addEventListener('resize', onWindowResize);
+            document.addEventListener('click', onMouseClick);
+            document.addEventListener('keydown', onKeyDown);
         }
         
-        // Добавление дерева
-        function addTree(x, y, z) {
-            // Ствол
-            const trunkGeometry = new THREE.CylinderGeometry(0.4, 0.5, 3, 8);
-            const trunkMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
-            const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
-            trunk.position.set(x, y + 1.5, z);
-            trunk.castShadow = true;
-            scene.add(trunk);
+        // Создание городской среды
+        function createCityEnvironment() {
+            // Текстуры
+            const textureLoader = new THREE.TextureLoader();
+            const groundTexture = textureLoader.load('https://i.imgur.com/5QzC2bW.png');
+            groundTexture.wrapS = groundTexture.wrapT = THREE.RepeatWrapping;
+            groundTexture.repeat.set(20, 20);
             
-            // Крона
-            const crownGeometry = new THREE.ConeGeometry(2, 5, 8);
-            const crownMaterial = new THREE.MeshStandardMaterial({ color: 0x2E8B57 });
-            const crown = new THREE.Mesh(crownGeometry, crownMaterial);
-            crown.position.set(x, y + 5, z);
-            crown.castShadow = true;
-            scene.add(crown);
+            // Земля
+            const groundGeometry = new THREE.PlaneGeometry(100, 100);
+            const groundMaterial = new THREE.MeshStandardMaterial({ 
+                map: groundTexture,
+                roughness: 0.9,
+                metalness: 0.1
+            });
+            const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+            ground.rotation.x = -Math.PI / 2;
+            ground.receiveShadow = true;
+            scene.add(ground);
             
-            objects.push(trunk, crown);
+            // Здания
+            for (let i = 0; i < 15; i++) {
+                createBuilding(
+                    Math.random() * 80 - 40,
+                    0,
+                    Math.random() * 80 - 40,
+                    Math.random() * 10 + 15,
+                    Math.random() * 10 + 10,
+                    Math.random() * 10 + 10
+                );
+            }
+            
+            // Баррикады
+            for (let i = 0; i < 20; i++) {
+                createBarricade(
+                    Math.random() * 70 - 35,
+                    0,
+                    Math.random() * 70 - 35
+                );
+            }
+            
+            // Обломки и мусор
+            for (let i = 0; i < 30; i++) {
+                createDebris(
+                    Math.random() * 80 - 40,
+                    0.5,
+                    Math.random() * 80 - 40
+                );
+            }
+            
+            // Контрольная точка
+            createCheckpoint(40, 0, -30);
         }
         
-        // Добавление камня
-        function addRock(x, y, z) {
-            const rockGeometry = new THREE.DodecahedronGeometry(1, 0);
-            const rockMaterial = new THREE.MeshStandardMaterial({ 
-                color: 0x7a7a7a,
+        // Создание здания
+        function createBuilding(x, y, z, width, height, depth) {
+            const geometry = new THREE.BoxGeometry(width, height, depth);
+            
+            // Случайный цвет здания
+            const colors = [0x888888, 0x777777, 0x666666, 0x555555];
+            const material = new THREE.MeshStandardMaterial({ 
+                color: colors[Math.floor(Math.random() * colors.length)],
+                roughness: 0.8,
+                metalness: 0.2
+            });
+            
+            const building = new THREE.Mesh(geometry, material);
+            building.position.set(x, y + height/2, z);
+            building.castShadow = true;
+            building.receiveShadow = true;
+            scene.add(building);
+            
+            // Окна
+            const windowMaterial = new THREE.MeshBasicMaterial({ 
+                color: 0x2244aa,
+                transparent: true,
+                opacity: 0.7
+            });
+            
+            for (let i = 0; i < Math.floor(height/3); i++) {
+                for (let j = 0; j < 2; j++) {
+                    const windowGeometry = new THREE.PlaneGeometry(2, 1);
+                    const windowMesh = new THREE.Mesh(windowGeometry, windowMaterial);
+                    
+                    const offsetX = (j === 0 ? -1 : 1) * (width/2 - 0.5);
+                    windowMesh.position.set(
+                        x + offsetX,
+                        y + 2 + i * 3,
+                        z + (Math.random() > 0.5 ? depth/2 - 0.1 : -depth/2 + 0.1)
+                    );
+                    
+                    windowMesh.rotation.y = j === 0 ? Math.PI : 0;
+                    scene.add(windowMesh);
+                }
+            }
+        }
+        
+        // Создание баррикады
+        function createBarricade(x, y, z) {
+            const barricadeGroup = new THREE.Group();
+            
+            // Основные элементы
+            for (let i = 0; i < 5; i++) {
+                const height = Math.random() * 2 + 1;
+                const width = Math.random() * 0.5 + 0.3;
+                const depth = Math.random() * 0.5 + 0.3;
+                
+                const geometry = new THREE.BoxGeometry(width, height, depth);
+                const material = new THREE.MeshStandardMaterial({ 
+                    color: 0x8B4513,
+                    roughness: 0.9
+                });
+                
+                const barricadePart = new THREE.Mesh(geometry, material);
+                barricadePart.position.set(
+                    x + (i - 2) * 0.7,
+                    y + height/2,
+                    z
+                );
+                
+                barricadePart.castShadow = true;
+                barricadeGroup.add(barricadePart);
+            }
+            
+            // Колючая проволока
+            const wireGeometry = new THREE.CylinderGeometry(0.05, 0.05, 5);
+            const wireMaterial = new THREE.MeshStandardMaterial({ color: 0xcccccc });
+            
+            for (let i = 0; i < 3; i++) {
+                const wire = new THREE.Mesh(wireGeometry, wireMaterial);
+                wire.position.set(
+                    x,
+                    y + 1.5 + i * 0.5,
+                    z
+                );
+                wire.rotation.z = Math.PI / 2;
+                barricadeGroup.add(wire);
+            }
+            
+            scene.add(barricadeGroup);
+        }
+        
+        // Создание обломков
+        function createDebris(x, y, z) {
+            const debrisGroup = new THREE.Group();
+            
+            // Типы обломков
+            const debrisTypes = [
+                { type: 'box', size: [0.5, 0.2, 1.0] },
+                { type: 'cylinder', size: [0.3, 0.3, 0.8] },
+                { type: 'sphere', size: [0.4, 0.4, 0.4] }
+            ];
+            
+            const debrisType = debrisTypes[Math.floor(Math.random() * debrisTypes.length)];
+            let geometry;
+            
+            if (debrisType.type === 'box') {
+                geometry = new THREE.BoxGeometry(...debrisType.size);
+            } else if (debrisType.type === 'cylinder') {
+                geometry = new THREE.CylinderGeometry(
+                    debrisType.size[0], 
+                    debrisType.size[1], 
+                    debrisType.size[2]
+                );
+            } else {
+                geometry = new THREE.SphereGeometry(debrisType.size[0]);
+            }
+            
+            const material = new THREE.MeshStandardMaterial({ 
+                color: 0x777777,
                 roughness: 0.8
             });
-            const rock = new THREE.Mesh(rockGeometry, rockMaterial);
-            rock.position.set(x, y + 1, z);
-            rock.castShadow = true;
-            rock.rotation.y = Math.random() * Math.PI;
-            scene.add(rock);
-            objects.push(rock);
+            
+            const debris = new THREE.Mesh(geometry, material);
+            debris.position.set(x, y, z);
+            debris.rotation.set(
+                Math.random() * Math.PI,
+                Math.random() * Math.PI,
+                Math.random() * Math.PI
+            );
+            
+            debris.castShadow = true;
+            debrisGroup.add(debris);
+            scene.add(debrisGroup);
         }
         
-        // Добавление здания
-        function addBuilding(x, y, z) {
+        // Создание контрольной точки
+        function createCheckpoint(x, y, z) {
+            const checkpointGroup = new THREE.Group();
+            
             // Основание
-            const baseGeometry = new THREE.BoxGeometry(8, 4, 8);
-            const baseMaterial = new THREE.MeshStandardMaterial({ color: 0xc0c0c0 });
+            const baseGeometry = new THREE.CylinderGeometry(3, 3, 1, 32);
+            const baseMaterial = new THREE.MeshStandardMaterial({ color: 0x333333 });
             const base = new THREE.Mesh(baseGeometry, baseMaterial);
-            base.position.set(x, y + 2, z);
-            base.castShadow = true;
-            base.receiveShadow = true;
-            scene.add(base);
+            base.position.set(x, y + 0.5, z);
+            checkpointGroup.add(base);
             
-            // Крыша
-            const roofGeometry = new THREE.ConeGeometry(6, 4, 4);
-            const roofMaterial = new THREE.MeshStandardMaterial({ color: 0x8B0000 });
-            const roof = new THREE.Mesh(roofGeometry, roofMaterial);
-            roof.position.set(x, y + 5, z);
-            roof.rotation.y = Math.PI / 4;
-            roof.castShadow = true;
-            scene.add(roof);
+            // Столб
+            const poleGeometry = new THREE.CylinderGeometry(0.3, 0.3, 8, 16);
+            const poleMaterial = new THREE.MeshStandardMaterial({ color: 0x555555 });
+            const pole = new THREE.Mesh(poleGeometry, poleMaterial);
+            pole.position.set(x, y + 4.5, z);
+            checkpointGroup.add(pole);
             
-            // Дверь
-            const doorGeometry = new THREE.BoxGeometry(1.5, 2.5, 0.2);
-            const doorMaterial = new THREE.MeshStandardMaterial({ color: 0x5d2906 });
-            const door = new THREE.Mesh(doorGeometry, doorMaterial);
-            door.position.set(x, y + 1, z + 4.1);
-            scene.add(door);
+            // Знак
+            const signGeometry = new THREE.BoxGeometry(2, 1, 0.1);
+            const signMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0xff4500,
+                emissive: 0xff4500,
+                emissiveIntensity: 0.5
+            });
+            const sign = new THREE.Mesh(signGeometry, signMaterial);
+            sign.position.set(x, y + 7, z);
+            checkpointGroup.add(sign);
             
-            objects.push(base, roof, door);
+            // Свет
+            const light = new THREE.PointLight(0xff4500, 1, 15);
+            light.position.set(x, y + 7, z);
+            scene.add(light);
+            
+            scene.add(checkpointGroup);
         }
         
-        // Анимация
-        function animate() {
-            requestAnimationFrame(animate);
+        // Инициализация управления от первого лица
+        function initFPSControls() {
+            controls = new THREE.PointerLockControls(camera, document.body);
             
-            // Анимация камеры (в реальной игре здесь было бы движение игрока)
-            camera.position.x = 30 * Math.sin(Date.now() * 0.001);
-            camera.position.z = 30 * Math.cos(Date.now() * 0.001);
-            camera.lookAt(0, 0, 0);
+            // Обработчик блокировки указателя
+            document.addEventListener('click', function() {
+                if (gameStarted && !controls.isLocked) {
+                    controls.lock();
+                }
+            }, false);
             
-            controls.update();
-            renderer.render(scene, camera);
+            controls.addEventListener('lock', function() {
+                document.body.style.cursor = 'none';
+            });
             
-            // Обновление мини-карты
-            updateMiniMap();
+            controls.addEventListener('unlock', function() {
+                document.body.style.cursor = 'auto';
+            });
+            
+            // Движение игрока
+            const moveSpeed = 0.2;
+            const keys = {};
+            
+            document.addEventListener('keydown', function(event) {
+                keys[event.code] = true;
+            });
+            
+            document.addEventListener('keyup', function(event) {
+                keys[event.code] = false;
+            });
+            
+            // Обновление движения
+            function updatePlayerMovement() {
+                if (controls.isLocked) {
+                    if (keys['KeyW']) {
+                        controls.moveForward(moveSpeed);
+                    }
+                    if (keys['KeyS']) {
+                        controls.moveForward(-moveSpeed);
+                    }
+                    if (keys['KeyA']) {
+                        controls.moveRight(-moveSpeed);
+                    }
+                    if (keys['KeyD']) {
+                        controls.moveRight(moveSpeed);
+                    }
+                }
+                
+                requestAnimationFrame(updatePlayerMovement);
+            }
+            
+            updatePlayerMovement();
         }
         
-        // Обновление мини-карты
-        function updateMiniMap() {
-            const playerMarker = document.getElementById('playerMarker');
-            const mapSize = 150;
-            const worldSize = 100;
-            
-            // В реальной игре здесь использовались бы реальные координаты игрока
-            const playerX = 50 * Math.sin(Date.now() * 0.002);
-            const playerZ = 50 * Math.cos(Date.now() * 0.002);
-            
-            // Преобразование мировых координат в координаты мини-карты
-            const markerX = (playerX + worldSize/2) * (mapSize / worldSize);
-            const markerY = (playerZ + worldSize/2) * (mapSize / worldSize);
-            
-            playerMarker.style.left = `${markerX}px`;
-            playerMarker.style.top = `${markerY}px`;
+        // Создание врагов
+        function createEnemies() {
+            for (let i = 0; i < 8; i++) {
+                const type = ENEMY_TYPES[Math.floor(Math.random() * ENEMY_TYPES.length)];
+                const x = Math.random() * 60 - 30;
+                const z = Math.random() * 60 - 30;
+                
+                enemies.push({
+                    type: type,
+                    position: { x: x, y: 0, z: z },
+                    health: type === 'elite' ? 100 : 75,
+                    detectedPlayer: false
+                });
+            }
         }
         
-        // Обработка изменения размера окна
+        // Обновление врагов
+        function updateEnemies() {
+            const playerPos = camera.position;
+            
+            enemies.forEach((enemy, index) => {
+                // Простой ИИ: если игрок близко, двигаться к нему
+                const dx = playerPos.x - enemy.position.x;
+                const dz = playerPos.z - enemy.position.z;
+                const distance = Math.sqrt(dx * dx + dz * dz);
+                
+                if (distance < 30) {
+                    enemy.detectedPlayer = true;
+                    
+                    // Движение к игроку
+                    if (distance > 5) {
+                        enemy.position.x += dx * 0.01;
+                        enemy.position.z += dz * 0.01;
+                    }
+                    
+                    // Случайная атака
+                    if (Math.random() < 0.01 && distance < 20) {
+                        playerHealth -= enemy.type === 'elite' ? 15 : 10;
+                        updateHealthBar();
+                        
+                        if (playerHealth <= 0) {
+                            showHudMessage("ВЫ УМЕРЛИ", 3000);
+                            resetPlayer();
+                        }
+                    }
+                } else {
+                    enemy.detectedPlayer = false;
+                }
+            });
+        }
+        
+        // Обновление полоски здоровья
+        function updateHealthBar() {
+            healthBar.style.width = `${playerHealth}%`;
+        }
+        
+        // Показать сообщение на HUD
+        function showHudMessage(message, duration = 2000) {
+            hudMessage.textContent = message;
+            hudMessage.style.display = 'block';
+            
+            setTimeout(() => {
+                hudMessage.style.display = 'none';
+            }, duration);
+        }
+        
+        // Сброс игрока после смерти
+        function resetPlayer() {
+            playerHealth = 100;
+            updateHealthBar();
+            camera.position.set(0, 2, 0);
+        }
+        
+        // Обработчик клика мыши (выстрел)
+        function onMouseClick(event) {
+            if (!gameStarted || !controls.isLocked) return;
+            
+            // Эффект выстрела
+            const muzzleFlash = document.createElement('div');
+            muzzleFlash.style.position = 'absolute';
+            muzzleFlash.style.top = '50%';
+            muzzleFlash.style.left = '50%';
+            muzzleFlash.style.width = '40px';
+            muzzleFlash.style.height = '40px';
+            muzzleFlash.style.background = 'radial-gradient(circle, #ff8c00, #ff4500)';
+            muzzleFlash.style.borderRadius = '50%';
+            muzzleFlash.style.transform = 'translate(-50%, -50%)';
+            muzzleFlash.style.zIndex = '5';
+            document.getElementById('uiContainer').appendChild(muzzleFlash);
+            
+            // Удаление эффекта через 50 мс
+            setTimeout(() => {
+                document.getElementById('uiContainer').removeChild(muzzleFlash);
+            }, 50);
+            
+            // Звук выстрела
+            playSound('shoot');
+            
+            // Проверка попадания
+            checkHit();
+        }
+        
+        // Проверка попадания
+        function checkHit() {
+            const playerPos = camera.position;
+            let hit = false;
+            
+            enemies.forEach((enemy, index) => {
+                const dx = playerPos.x - enemy.position.x;
+                const dz = playerPos.z - enemy.position.z;
+                const distance = Math.sqrt(dx * dx + dz * dz);
+                
+                if (distance < 20 && Math.random() > 0.3) {
+                    enemy.health -= 25;
+                    hit = true;
+                    
+                    if (enemy.health <= 0) {
+                        showHudMessage("ВРАГ УНИЧТОЖЕН", 1500);
+                        enemies.splice(index, 1);
+                    }
+                }
+            });
+            
+            if (hit) {
+                playSound('hit');
+            }
+        }
+        
+        // Воспроизведение звука
+        function playSound(type) {
+            // В реальной игре здесь было бы воспроизведение звуковых файлов
+            // Для демонстрации просто выводим в консоль
+            console.log(`Sound played: ${type}`);
+        }
+        
+        // Обработчик клавиш
+        function onKeyDown(event) {
+            if (event.code === 'KeyR') {
+                // Перезарядка
+                ammoCount.textContent = WEAPONS.pistol.ammo;
+                showHudMessage("ПЕРЕЗАРЯДКА", 1000);
+            }
+            else if (event.code === 'Digit1') {
+                // Смена оружия
+                ammoCount.textContent = WEAPONS.gravity.ammo;
+                document.querySelector('.weapon-name').textContent = WEAPONS.gravity.name;
+                gravityGunActive = true;
+            }
+            else if (event.code === 'Digit2') {
+                ammoCount.textContent = WEAPONS.pistol.ammo;
+                document.querySelector('.weapon-name').textContent = WEAPONS.pistol.name;
+                gravityGunActive = false;
+            }
+            else if (event.code === 'Digit3') {
+                ammoCount.textContent = WEAPONS.shotgun.ammo;
+                document.querySelector('.weapon-name').textContent = WEAPONS.shotgun.name;
+                gravityGunActive = false;
+            }
+        }
+        
+        // Обработчик изменения размера окна
         function onWindowResize() {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
         
-        // Запуск игры при загрузке страницы
-        window.addEventListener('load', initGame);
-        
-        // Кнопка взаимодействия
-        document.getElementById('interactBtn').addEventListener('click', function() {
-            // В реальной игре здесь было бы взаимодействие с объектами
-            questDescription.textContent = "Вы осмотрели местность. На севере вы замечаете древние руины, на западе - таинственный лес.";
+        // Анимация
+        function animate() {
+            requestAnimationFrame(animate);
             
-            // Обновление энергии
-            const currentEnergy = parseInt(energyEl.textContent);
-            energyEl.textContent = Math.max(0, currentEnergy - 10);
-        });
-        
-        // Кнопка инвентаря
-        document.getElementById('inventoryBtn').addEventListener('click', function() {
-            questTitle.textContent = "Ваш инвентарь";
-            questDescription.textContent = "Меч новичка, Кожаный доспех, 5 лечебных трав, Карта региона, Загадочный ключ";
-            choicesContainer.innerHTML = "";
-        });
-        
-        // Кнопка карты
-        document.getElementById('mapBtn').addEventListener('click', function() {
-            questTitle.textContent = "Карта региона";
-            questDescription.textContent = "Вы находитесь в центральной долине. На севере - заснеженные горы, на юге - бескрайняя пустыня, на востоке - древний лес, на западе - болота.";
+            // Обновление врагов
+            if (gameStarted) {
+                updateEnemies();
+                
+                // Проверка достижения контрольной точки
+                const playerPos = camera.position;
+                const dx = playerPos.x - 40;
+                const dz = playerPos.z - (-30);
+                const distance = Math.sqrt(dx * dx + dz * dz);
+                
+                if (distance < 5) {
+                    showHudMessage("МИССИЯ ВЫПОЛНЕНА", 5000);
+                }
+            }
             
-            // Очистка выбора
-            choicesContainer.innerHTML = "";
-            
-            // Добавление кнопок для выбора направления
-            const directions = ["Север: Горы", "Юг: Пустыня", "Восток: Лес", "Запад: Болота"];
-            directions.forEach((dir, index) => {
-                const button = document.createElement("button");
-                button.className = "choice-btn";
-                button.textContent = dir;
-                button.addEventListener("click", () => {
-                    questDescription.textContent = `Вы отправились в направлении: ${dir.split(':')[1].trim()}`;
-                    energyEl.textContent = Math.max(0, parseInt(energyEl.textContent) - 20);
-                });
-                choicesContainer.appendChild(button);
-            });
+            renderer.render(scene, camera);
+        }
+        
+        // Запуск игры
+        startBtn.addEventListener('click', function() {
+            startScreen.style.display = 'none';
+            gameStarted = true;
+            initGame();
+            showHudMessage("ПРЕДУПРЕЖДЕНИЕ: СОЛДАТЫ АЛЬЯНСА ОБНАРУЖЕНЫ", 3000);
         });
     </script>
 </body>
