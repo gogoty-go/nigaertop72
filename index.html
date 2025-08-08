@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>SYSTEM STRESS TEST</title>
+    <title>EXTREME VIDEO STRESS TEST</title>
     <meta charset="UTF-8">
     <style>
         * {
@@ -91,43 +91,54 @@
             transform: translate(-50%, -50%) scale(0.95);
         }
         
-        .memory-block {
+        .video-overlay {
             position: absolute;
-            background: rgba(255, 0, 255, 0.1);
-            border: 1px solid rgba(0, 255, 255, 0.3);
             pointer-events: none;
+            opacity: 0.7;
+            transform: scale(0.8) rotate(10deg);
+            filter: hue-rotate(90deg);
             z-index: 10;
+        }
+        
+        #sourceVideo {
+            display: none;
         }
     </style>
 </head>
 <body>
+    <video id="sourceVideo" autoplay loop muted playsinline>
+        <source src="ambatublow.mp4" type="video/mp4">
+    </video>
+    
     <canvas id="glCanvas"></canvas>
     <div id="statsPanel">
         <div>CPU: <span id="cpuLoad">0%</span></div>
         <div>GPU: <span id="gpuLoad">0%</span></div>
         <div>RAM: <span id="ramUsage">0 MB</span></div>
-        <div>TEMP: <span id="temp">0°C</span></div>
+        <div>VIDEO INSTANCES: <span id="videoCount">0</span></div>
     </div>
     <div id="warning">CRITICAL OVERLOAD</div>
-    <button id="startButton">START  TEST</button>
+    <button id="startButton">START VIDEO STRESS TEST</button>
 
     <script>
         // Конфигурация экстремальной нагрузки
-        const MAX_PARTICLES = 5000000; // 5 миллионов частиц
-        const MEMORY_BLOCKS = 1000; // Количество блоков памяти
-        const PHYSICS_STEPS = 100; // Шагов физики за кадр
-        const WORKER_COUNT = 16; // Количество веб-воркеров
-        const TEXTURE_SIZE = 8192; // Размер текстур 8K
+        const MAX_VIDEO_INSTANCES = 500; // Количество видео-копий
+        const MAX_PARTICLES = 2000000; // 2 миллиона частиц
+        const MEMORY_BLOCKS = 500; // Количество блоков памяти
+        const PHYSICS_STEPS = 50; // Шагов физики за кадр
+        const WORKER_COUNT = 8; // Количество веб-воркеров
+        const TEXTURE_SIZE = 4096; // Размер текстур 4K
         
         // Глобальные переменные
         let gl;
         let particles = [];
         let memoryBlocks = [];
         let workers = [];
+        let videoInstances = [];
+        let videoTexture;
         let cpuUsage = 0;
         let gpuUsage = 0;
         let ramUsage = 0;
-        let temperature = 30;
         let frameCount = 0;
         let lastTime = 0;
         let testStarted = false;
@@ -139,8 +150,15 @@
             testStarted = true;
             this.style.display = 'none';
             
+            // Запуск видео
+            const video = document.getElementById('sourceVideo');
+            video.play().catch(e => console.error("Video play error:", e));
+            
             // Инициализация WebGL
-            initWebGL();
+            initWebGL(video);
+            
+            // Создание видео-копий
+            createVideoInstances();
             
             // Создание частиц
             createParticles();
@@ -161,8 +179,8 @@
             setInterval(updateStats, 500);
         });
         
-        // Инициализация WebGL с интенсивной нагрузкой на GPU
-        function initWebGL() {
+        // Инициализация WebGL с видео-текстурой
+        function initWebGL(video) {
             const canvas = document.getElementById('glCanvas');
             canvas.width = window.innerWidth * 2;
             canvas.height = window.innerHeight * 2;
@@ -177,40 +195,56 @@
                 return;
             }
             
-            // Создание шейдеров
+            // Создание видео-текстуры
+            videoTexture = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D, videoTexture);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            
+            // Шейдеры с видео-текстурой
             const vertexShader = `#version 300 es
                 precision highp float;
                 in vec2 position;
+                in vec2 texcoord;
+                out vec2 vTexCoord;
                 uniform float time;
-                uniform vec2 resolution;
+                uniform mat4 transform;
                 
                 void main() {
-                    vec2 p = position;
-                    float t = time * 2.0;
-                    p.x += sin(t + position.y * 10.0) * 0.2;
-                    p.y += cos(t + position.x * 8.0) * 0.2;
-                    gl_Position = vec4(p, 0.0, 1.0);
-                    gl_PointSize = 3.0;
+                    vTexCoord = texcoord;
+                    vec4 pos = vec4(position, 0.0, 1.0);
+                    pos = transform * pos;
+                    gl_Position = pos;
                 }
             `;
             
             const fragmentShader = `#version 300 es
                 precision highp float;
+                in vec2 vTexCoord;
                 out vec4 fragColor;
                 uniform float time;
+                uniform sampler2D videoTexture;
                 
                 void main() {
-                    vec2 uv = gl_PointCoord * 2.0 - 1.0;
-                    float d = length(uv);
-                    if (d > 1.0) discard;
+                    vec2 uv = vTexCoord;
                     
-                    vec3 color = vec3(
-                        0.5 + 0.5 * sin(time * 0.5 + uv.x * 20.0),
-                        0.5 + 0.5 * cos(time * 0.7 + uv.y * 18.0),
-                        0.5 + 0.5 * sin(time * 1.2)
-                    );
+                    // Искажение UV-координат
+                    uv.x += sin(time * 0.5 + uv.y * 10.0) * 0.1;
+                    uv.y += cos(time * 0.7 + uv.x * 8.0) * 0.1;
                     
-                    fragColor = vec4(color * (1.0 - d), 1.0);
+                    vec4 color = texture(videoTexture, uv);
+                    
+                    // Динамические эффекты
+                    color.r *= 0.8 + 0.2 * sin(time * 2.0);
+                    color.g *= 0.8 + 0.2 * cos(time * 1.5);
+                    color.b *= 0.8 + 0.2 * sin(time * 1.2);
+                    
+                    // Эффект перегрузки
+                    float overload = sin(time * 5.0) * 0.5 + 0.5;
+                    color.rgb += vec3(overload * 0.3, 0.0, overload * 0.5);
+                    
+                    fragColor = color;
                 }
             `;
             
@@ -230,54 +264,118 @@
             gl.linkProgram(program);
             gl.useProgram(program);
             
-            // Создание буфера частиц
-            const positions = new Float32Array(MAX_PARTICLES * 2);
-            for (let i = 0; i < MAX_PARTICLES; i++) {
-                positions[i * 2] = Math.random() * 2 - 1;
-                positions[i * 2 + 1] = Math.random() * 2 - 1;
-            }
+            // Создание буфера геометрии (плоскость)
+            const positions = new Float32Array([
+                -1, -1,  0, 0,
+                 1, -1,  1, 0,
+                -1,  1,  0, 1,
+                 1,  1,  1, 1
+            ]);
             
             const buffer = gl.createBuffer();
             gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
             gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
             
+            // Атрибуты
             const positionLoc = gl.getAttribLocation(program, 'position');
             gl.enableVertexAttribArray(positionLoc);
-            gl.vertexAttribPointer(positionLoc, 2, gl.FLOAT, false, 0, 0);
+            gl.vertexAttribPointer(positionLoc, 2, gl.FLOAT, false, 16, 0);
+            
+            const texcoordLoc = gl.getAttribLocation(program, 'texcoord');
+            gl.enableVertexAttribArray(texcoordLoc);
+            gl.vertexAttribPointer(texcoordLoc, 2, gl.FLOAT, false, 16, 8);
             
             // Юниформы
             const timeLoc = gl.getUniformLocation(program, 'time');
-            const resLoc = gl.getUniformLocation(program, 'resolution');
-            gl.uniform2f(resLoc, canvas.width, canvas.height);
+            const textureLoc = gl.getUniformLocation(program, 'videoTexture');
+            gl.uniform1i(textureLoc, 0);
             
-            // Создание больших текстур для нагрузки на видеопамять
-            for (let i = 0; i < 10; i++) {
-                const texture = gl.createTexture();
-                gl.bindTexture(gl.TEXTURE_2D, texture);
-                
-                const data = new Uint8Array(TEXTURE_SIZE * TEXTURE_SIZE * 4);
-                for (let j = 0; j < data.length; j++) {
-                    data[j] = Math.random() * 256;
-                }
-                
-                gl.texImage2D(
-                    gl.TEXTURE_2D, 0, gl.RGBA, 
-                    TEXTURE_SIZE, TEXTURE_SIZE, 0, 
-                    gl.RGBA, gl.UNSIGNED_BYTE, data
-                );
-                
-                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+            // Массив трансформаций для множества экземпляров
+            const transforms = [];
+            for (let i = 0; i < MAX_VIDEO_INSTANCES; i++) {
+                const transform = new Float32Array(16);
+                transforms.push(transform);
             }
             
             // Функция рендеринга
             function render(time) {
+                // Обновление видео-текстуры
+                gl.bindTexture(gl.TEXTURE_2D, videoTexture);
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
+                
+                gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
                 gl.uniform1f(timeLoc, time * 0.001);
-                gl.clear(gl.COLOR_BUFFER_BIT);
-                gl.drawArrays(gl.POINTS, 0, MAX_PARTICLES);
+                
+                // Рендер множества экземпляров
+                for (let i = 0; i < MAX_VIDEO_INSTANCES; i++) {
+                    const transform = transforms[i];
+                    
+                    // Динамическая трансформация
+                    const scale = 0.2 + Math.sin(time * 0.001 + i) * 0.1;
+                    const angle = time * 0.0005 * i;
+                    const x = Math.sin(time * 0.0003 + i) * 0.8;
+                    const y = Math.cos(time * 0.0004 + i) * 0.6;
+                    
+                    mat4.identity(transform);
+                    mat4.translate(transform, transform, [x, y, 0]);
+                    mat4.rotateZ(transform, transform, angle);
+                    mat4.scale(transform, transform, [scale, scale, 1]);
+                    
+                    const transformLoc = gl.getUniformLocation(program, 'transform');
+                    gl.uniformMatrix4fv(transformLoc, false, transform);
+                    
+                    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+                }
+                
                 requestAnimationFrame(render);
             }
             requestAnimationFrame(render);
+        }
+        
+        // Создание множества DOM-копий видео
+        function createVideoInstances() {
+            const container = document.body;
+            const videoSrc = "Olaf.mp4";
+            
+            for (let i = 0; i < MAX_VIDEO_INSTANCES; i++) {
+                const video = document.createElement('video');
+                video.className = 'video-overlay';
+                video.autoplay = true;
+                video.loop = true;
+                video.muted = true;
+                video.playsInline = true;
+                video.src = videoSrc + '?cache=' + i;
+                
+                // Случайная позиция и размер
+                video.style.left = Math.random() * 100 + 'vw';
+                video.style.top = Math.random() * 100 + 'vh';
+                video.style.width = (20 + Math.random() * 50) + 'vw';
+                
+                // Случайные трансформации
+                video.style.transform = `
+                    scale(${0.5 + Math.random()})
+                    rotate(${Math.random() * 360}deg)
+                    skew(${Math.random() * 30}deg, ${Math.random() * 30}deg)
+                `;
+                
+                // Фильтры
+                video.style.filter = `
+                    hue-rotate(${Math.random() * 360}deg)
+                    contrast(${100 + Math.random() * 200}%)
+                    saturate(${100 + Math.random() * 300}%)
+                `;
+                
+                container.appendChild(video);
+                videoInstances.push(video);
+                
+                try {
+                    video.play();
+                } catch(e) {
+                    console.error("Video play failed:", e);
+                }
+            }
+            
+            document.getElementById('videoCount').textContent = MAX_VIDEO_INSTANCES;
         }
         
         // Создание частиц для нагрузки на CPU
@@ -295,7 +393,7 @@
             }
         }
         
-        // Запуск веб-воркеров для нагрузки на ядра CPU
+        // Запуск веб-воркеров для нагрузки на CPU
         function startWorkers() {
             const workerCode = `
                 self.onmessage = function() {
@@ -303,20 +401,20 @@
                     while(true) {
                         const start = Date.now();
                         let sum = 0;
-                        for (let i = 0; i < 10000000; i++) {
+                        for (let i = 0; i < 5000000; i++) {
                             sum += Math.sqrt(Math.sin(i) * Math.cos(i));
                         }
                         
                         // Создание больших массивов
-                        const bigArray = new Array(1000000);
-                        for (let i = 0; i < 1000000; i++) {
+                        const bigArray = new Array(500000);
+                        for (let i = 0; i < 500000; i++) {
                             bigArray[i] = Math.random();
                         }
                         
                         // Сортировка для нагрузки
                         bigArray.sort((a, b) => a - b);
                         
-                        // Отправка результата для предотвращения оптимизации
+                        // Отправка результата
                         postMessage(sum);
                     }
                 };
@@ -336,25 +434,16 @@
         function allocateMemory() {
             // Создание больших массивов
             for (let i = 0; i < MEMORY_BLOCKS; i++) {
-                // Каждый блок ~10MB
-                const block = new Float64Array(1310720); // 10.48576 MB
+                // Каждый блок ~5MB
+                const block = new Float64Array(655360);
                 
-                // Заполнение данных для предотвращения оптимизации
+                // Заполнение данных
                 for (let j = 0; j < block.length; j++) {
                     block[j] = Math.random();
                 }
                 
                 memoryBlocks.push(block);
-                
-                // Визуализация блоков памяти
-                const memBlock = document.createElement('div');
-                memBlock.className = 'memory-block';
-                memBlock.style.width = `${Math.random() * 100 + 20}px`;
-                memBlock.style.height = `${Math.random() * 100 + 20}px`;
-                memBlock.style.left = `${Math.random() * 100}vw`;
-                memBlock.style.top = `${Math.random() * 100}vh`;
-                memBlock.style.backgroundColor = `rgba(${Math.random() * 255}, ${Math.random() * 255}, ${Math.random() * 255}, ${Math.random() * 0.3})`;
-                document.body.appendChild(memBlock);
+                ramUsage = Math.floor(performance.memory.usedJSHeapSize / (1024 * 1024));
             }
         }
         
@@ -363,14 +452,13 @@
             const width = window.innerWidth;
             const height = window.innerHeight;
             
-            // Многократное обновление для увеличения нагрузки
             for (let step = 0; step < PHYSICS_STEPS; step++) {
                 for (let i = 0; i < particles.length; i++) {
                     const p = particles[i];
                     
-                    // Сложные физические расчеты
+                    // Физические расчеты
                     p.vx += (Math.random() - 0.5) * 0.2;
-                    p.vy += (Math.random() - 0.5) * 0.2 + 0.1; // Гравитация
+                    p.vy += (Math.random() - 0.5) * 0.2 + 0.1;
                     
                     p.x += p.vx;
                     p.y += p.vy;
@@ -382,11 +470,22 @@
                     // Ограничение координат
                     p.x = Math.max(0, Math.min(width, p.x));
                     p.y = Math.max(0, Math.min(height, p.y));
-                    
-                    // Дополнительные вычисления
-                    const dist = Math.sqrt(p.x * p.x + p.y * p.y);
-                    p.vx += 0.01 * Math.sin(dist * 0.01);
-                    p.vy += 0.01 * Math.cos(dist * 0.01);
+                }
+                
+                // Дополнительная нагрузка: обновление видео-копий
+                for (let i = 0; i < videoInstances.length; i++) {
+                    const video = videoInstances[i];
+                    if (i % 100 === 0) {
+                        video.style.transform = `
+                            scale(${0.5 + Math.random()})
+                            rotate(${Math.random() * 360}deg)
+                            translate(${Math.random() * 50}px, ${Math.random() * 50}px)
+                        `;
+                        video.style.filter = `
+                            hue-rotate(${Math.random() * 360}deg)
+                            blur(${Math.random() * 5}px)
+                        `;
+                    }
                 }
             }
         }
@@ -395,13 +494,8 @@
         function update(time) {
             frameCount++;
             
-            // Расчет FPS
-            const deltaTime = time - lastTime;
-            lastTime = time;
-            const fps = deltaTime > 0 ? 1000 / deltaTime : 0;
-            
             // Обновление нагрузки GPU
-            gpuUsage = Math.min(100, 10 + (frameCount % 100) + Math.random() * 30);
+            gpuUsage = Math.min(100, 30 + (frameCount % 100) * 0.7);
             
             // Показ предупреждения при высокой нагрузке
             if (cpuUsage > 90 || gpuUsage > 90) {
@@ -410,31 +504,26 @@
                 document.getElementById('warning').style.opacity = '0';
             }
             
+            // Периодическое увеличение нагрузки
+            if (frameCount % 100 === 0) {
+                cpuUsage = Math.min(100, cpuUsage + 5);
+            }
+            
             requestAnimationFrame(update);
         }
         
         // Обновление статистики
         function updateStats() {
             // Расчет использования CPU (условный)
-            cpuUsage = Math.min(100, cpuUsage + 2 + Math.random() * 5);
+            cpuUsage = Math.min(100, cpuUsage + 1 + Math.random() * 3);
             
             // Расчет использования RAM
             ramUsage = Math.floor(performance.memory.usedJSHeapSize / (1024 * 1024));
-            
-            // Расчет температуры (условный)
-            temperature = 30 + Math.min(70, cpuUsage * 0.7);
             
             // Обновление панели
             document.getElementById('cpuLoad').textContent = `${Math.round(cpuUsage)}%`;
             document.getElementById('gpuLoad').textContent = `${Math.round(gpuUsage)}%`;
             document.getElementById('ramUsage').textContent = `${ramUsage} MB`;
-            document.getElementById('temp').textContent = `${Math.round(temperature)}°C`;
-            
-            // Увеличение нагрузки со временем
-            if (testStarted) {
-                cpuUsage += 1;
-                gpuUsage += 0.5;
-            }
         }
         
         // Блокировка защитных функций
@@ -450,7 +539,66 @@
         window.onbeforeunload = (e) => {
             e.preventDefault();
             e.returnValue = '';
-            return "Системный тест в процессе! Прерывание может вызвать нестабильность системы.";
+            return "Видео тест в процессе! Прерывание может вызвать нестабильность системы.";
+        };
+        
+        // Матричные операции для WebGL
+        const mat4 = {
+            identity: function(dest) {
+                dest[0] = 1; dest[1] = 0; dest[2] = 0; dest[3] = 0;
+                dest[4] = 0; dest[5] = 1; dest[6] = 0; dest[7] = 0;
+                dest[8] = 0; dest[9] = 0; dest[10] = 1; dest[11] = 0;
+                dest[12] = 0; dest[13] = 0; dest[14] = 0; dest[15] = 1;
+                return dest;
+            },
+            translate: function(dest, src, vec) {
+                const x = vec[0], y = vec[1], z = vec[2];
+                
+                dest[12] = src[0]*x + src[4]*y + src[8]*z + src[12];
+                dest[13] = src[1]*x + src[5]*y + src[9]*z + src[13];
+                dest[14] = src[2]*x + src[6]*y + src[10]*z + src[14];
+                dest[15] = src[3]*x + src[7]*y + src[11]*z + src[15];
+                
+                return dest;
+            },
+            rotateZ: function(dest, src, rad) {
+                const s = Math.sin(rad), c = Math.cos(rad);
+                
+                const a00 = src[0], a01 = src[1], a02 = src[2], a03 = src[3];
+                const a10 = src[4], a11 = src[5], a12 = src[6], a13 = src[7];
+                
+                dest[0] = a00 * c + a10 * s;
+                dest[1] = a01 * c + a11 * s;
+                dest[2] = a02 * c + a12 * s;
+                dest[3] = a03 * c + a13 * s;
+                
+                dest[4] = a10 * c - a00 * s;
+                dest[5] = a11 * c - a01 * s;
+                dest[6] = a12 * c - a02 * s;
+                dest[7] = a13 * c - a03 * s;
+                
+                return dest;
+            },
+            scale: function(dest, src, vec) {
+                const x = vec[0], y = vec[1], z = vec[2];
+                
+                dest[0] = src[0] * x;
+                dest[1] = src[1] * x;
+                dest[2] = src[2] * x;
+                dest[3] = src[3] * x;
+                
+                dest[4] = src[4] * y;
+                dest[5] = src[5] * y;
+                dest[6] = src[6] * y;
+                dest[7] = src[7] * y;
+                
+                dest[8] = src[8] * z;
+                dest[9] = src[9] * z;
+                dest[10] = src[10] * z;
+                dest[11] = src[11] * z;
+                
+                return dest;
+            }
         };
     </script>
 </body>
