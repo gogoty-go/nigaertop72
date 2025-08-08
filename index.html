@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>EXTREME VIDEO STRESS TEST</title>
+    <title>CPU/RAM STRESS TEST</title>
     <meta charset="UTF-8">
     <style>
         * {
@@ -10,24 +10,14 @@
             box-sizing: border-box;
             overflow: hidden;
             user-select: none;
-            -webkit-tap-highlight-color: transparent;
         }
         
         body, html {
             width: 100%;
             height: 100%;
             background: #000;
-            font-family: 'Arial', sans-serif;
+            font-family: Arial, sans-serif;
             touch-action: none;
-        }
-        
-        #glCanvas {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 0;
         }
         
         #statsPanel {
@@ -37,7 +27,6 @@
             color: #0f0;
             font-family: 'Courier New', monospace;
             font-size: 18px;
-            text-shadow: 0 0 5px #0f0;
             z-index: 100;
             background: rgba(0, 0, 0, 0.7);
             padding: 15px;
@@ -51,13 +40,11 @@
             left: 50%;
             transform: translate(-50%, -50%);
             color: red;
-            font-size: 72px;
+            font-size: 48px;
             text-align: center;
-            text-transform: uppercase;
             z-index: 200;
             opacity: 0;
             transition: opacity 0.3s;
-            text-shadow: 0 0 30px #f00;
             font-weight: bold;
             pointer-events: none;
         }
@@ -67,80 +54,62 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: linear-gradient(to right, #ff0066, #6600ff);
+            background: linear-gradient(to right, #ff5500, #ffaa00);
             color: white;
             border: none;
-            padding: 25px 60px;
-            font-size: 32px;
+            padding: 20px 50px;
+            font-size: 28px;
             font-weight: bold;
             border-radius: 50px;
             cursor: pointer;
             z-index: 300;
-            text-transform: uppercase;
-            letter-spacing: 3px;
-            box-shadow: 0 0 50px rgba(255, 0, 102, 0.7);
-            transition: all 0.4s;
+            box-shadow: 0 0 30px rgba(255, 85, 0, 0.7);
         }
         
-        #startButton:hover {
-            transform: translate(-50%, -50%) scale(1.1);
-            box-shadow: 0 0 70px rgba(255, 0, 102, 0.9);
-        }
-        
-        #startButton:active {
-            transform: translate(-50%, -50%) scale(0.95);
-        }
-        
-        .video-overlay {
+        .video-instance {
             position: absolute;
+            opacity: 0.8;
             pointer-events: none;
-            opacity: 0.7;
-            transform: scale(0.8) rotate(10deg);
+            transform: scale(0.7);
             filter: hue-rotate(90deg);
-            z-index: 10;
+            border: 2px solid white;
         }
         
-        #sourceVideo {
-            display: none;
+        .particle {
+            position: absolute;
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 5;
         }
     </style>
 </head>
 <body>
-    <video id="sourceVideo" autoplay loop muted playsinline>
-        <source src="ambatublow.mp4" type="video/mp4">
-    </video>
-    
-    <canvas id="glCanvas"></canvas>
     <div id="statsPanel">
         <div>CPU: <span id="cpuLoad">0%</span></div>
-        <div>GPU: <span id="gpuLoad">0%</span></div>
         <div>RAM: <span id="ramUsage">0 MB</span></div>
-        <div>VIDEO INSTANCES: <span id="videoCount">0</span></div>
+        <div>VIDEOS: <span id="videoCount">0</span></div>
+        <div>PARTICLES: <span id="particleCount">0</span></div>
     </div>
-    <div id="warning">CRITICAL OVERLOAD</div>
-    <button id="startButton">START VIDEO STRESS TEST</button>
+    <div id="warning">CPU OVERLOAD</div>
+    <button id="startButton">START CPU STRESS TEST</button>
 
     <script>
-        // Конфигурация экстремальной нагрузки
-        const MAX_VIDEO_INSTANCES = 500; // Количество видео-копий
-        const MAX_PARTICLES = 2000000; // 2 миллиона частиц
-        const MEMORY_BLOCKS = 500; // Количество блоков памяти
-        const PHYSICS_STEPS = 50; // Шагов физики за кадр
+        // Конфигурация нагрузки
+        const VIDEO_INSTANCES = 300; // Количество видео
+        const MAX_PARTICLES = 500000; // 500 тысяч частиц
+        const MEMORY_BLOCKS = 1000; // Количество блоков памяти
+        const PHYSICS_STEPS = 20; // Шагов физики за кадр
         const WORKER_COUNT = 8; // Количество веб-воркеров
-        const TEXTURE_SIZE = 4096; // Размер текстур 4K
         
         // Глобальные переменные
-        let gl;
         let particles = [];
         let memoryBlocks = [];
         let workers = [];
-        let videoInstances = [];
-        let videoTexture;
+        let videoElements = [];
         let cpuUsage = 0;
-        let gpuUsage = 0;
         let ramUsage = 0;
-        let frameCount = 0;
-        let lastTime = 0;
         let testStarted = false;
         
         // Инициализация теста
@@ -149,13 +118,6 @@
             
             testStarted = true;
             this.style.display = 'none';
-            
-            // Запуск видео
-            const video = document.getElementById('sourceVideo');
-            video.play().catch(e => console.error("Video play error:", e));
-            
-            // Инициализация WebGL
-            initWebGL(video);
             
             // Создание видео-копий
             createVideoInstances();
@@ -179,194 +141,38 @@
             setInterval(updateStats, 500);
         });
         
-        // Инициализация WebGL с видео-текстурой
-        function initWebGL(video) {
-            const canvas = document.getElementById('glCanvas');
-            canvas.width = window.innerWidth * 2;
-            canvas.height = window.innerHeight * 2;
-            
-            gl = canvas.getContext('webgl2', {
-                antialias: false,
-                powerPreference: "high-performance"
-            });
-            
-            if (!gl) {
-                alert('WebGL 2 не поддерживается!');
-                return;
-            }
-            
-            // Создание видео-текстуры
-            videoTexture = gl.createTexture();
-            gl.bindTexture(gl.TEXTURE_2D, videoTexture);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-            
-            // Шейдеры с видео-текстурой
-            const vertexShader = `#version 300 es
-                precision highp float;
-                in vec2 position;
-                in vec2 texcoord;
-                out vec2 vTexCoord;
-                uniform float time;
-                uniform mat4 transform;
-                
-                void main() {
-                    vTexCoord = texcoord;
-                    vec4 pos = vec4(position, 0.0, 1.0);
-                    pos = transform * pos;
-                    gl_Position = pos;
-                }
-            `;
-            
-            const fragmentShader = `#version 300 es
-                precision highp float;
-                in vec2 vTexCoord;
-                out vec4 fragColor;
-                uniform float time;
-                uniform sampler2D videoTexture;
-                
-                void main() {
-                    vec2 uv = vTexCoord;
-                    
-                    // Искажение UV-координат
-                    uv.x += sin(time * 0.5 + uv.y * 10.0) * 0.1;
-                    uv.y += cos(time * 0.7 + uv.x * 8.0) * 0.1;
-                    
-                    vec4 color = texture(videoTexture, uv);
-                    
-                    // Динамические эффекты
-                    color.r *= 0.8 + 0.2 * sin(time * 2.0);
-                    color.g *= 0.8 + 0.2 * cos(time * 1.5);
-                    color.b *= 0.8 + 0.2 * sin(time * 1.2);
-                    
-                    // Эффект перегрузки
-                    float overload = sin(time * 5.0) * 0.5 + 0.5;
-                    color.rgb += vec3(overload * 0.3, 0.0, overload * 0.5);
-                    
-                    fragColor = color;
-                }
-            `;
-            
-            // Компиляция шейдеров
-            const vs = gl.createShader(gl.VERTEX_SHADER);
-            gl.shaderSource(vs, vertexShader);
-            gl.compileShader(vs);
-            
-            const fs = gl.createShader(gl.FRAGMENT_SHADER);
-            gl.shaderSource(fs, fragmentShader);
-            gl.compileShader(fs);
-            
-            // Создание программы
-            const program = gl.createProgram();
-            gl.attachShader(program, vs);
-            gl.attachShader(program, fs);
-            gl.linkProgram(program);
-            gl.useProgram(program);
-            
-            // Создание буфера геометрии (плоскость)
-            const positions = new Float32Array([
-                -1, -1,  0, 0,
-                 1, -1,  1, 0,
-                -1,  1,  0, 1,
-                 1,  1,  1, 1
-            ]);
-            
-            const buffer = gl.createBuffer();
-            gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-            gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
-            
-            // Атрибуты
-            const positionLoc = gl.getAttribLocation(program, 'position');
-            gl.enableVertexAttribArray(positionLoc);
-            gl.vertexAttribPointer(positionLoc, 2, gl.FLOAT, false, 16, 0);
-            
-            const texcoordLoc = gl.getAttribLocation(program, 'texcoord');
-            gl.enableVertexAttribArray(texcoordLoc);
-            gl.vertexAttribPointer(texcoordLoc, 2, gl.FLOAT, false, 16, 8);
-            
-            // Юниформы
-            const timeLoc = gl.getUniformLocation(program, 'time');
-            const textureLoc = gl.getUniformLocation(program, 'videoTexture');
-            gl.uniform1i(textureLoc, 0);
-            
-            // Массив трансформаций для множества экземпляров
-            const transforms = [];
-            for (let i = 0; i < MAX_VIDEO_INSTANCES; i++) {
-                const transform = new Float32Array(16);
-                transforms.push(transform);
-            }
-            
-            // Функция рендеринга
-            function render(time) {
-                // Обновление видео-текстуры
-                gl.bindTexture(gl.TEXTURE_2D, videoTexture);
-                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
-                
-                gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-                gl.uniform1f(timeLoc, time * 0.001);
-                
-                // Рендер множества экземпляров
-                for (let i = 0; i < MAX_VIDEO_INSTANCES; i++) {
-                    const transform = transforms[i];
-                    
-                    // Динамическая трансформация
-                    const scale = 0.2 + Math.sin(time * 0.001 + i) * 0.1;
-                    const angle = time * 0.0005 * i;
-                    const x = Math.sin(time * 0.0003 + i) * 0.8;
-                    const y = Math.cos(time * 0.0004 + i) * 0.6;
-                    
-                    mat4.identity(transform);
-                    mat4.translate(transform, transform, [x, y, 0]);
-                    mat4.rotateZ(transform, transform, angle);
-                    mat4.scale(transform, transform, [scale, scale, 1]);
-                    
-                    const transformLoc = gl.getUniformLocation(program, 'transform');
-                    gl.uniformMatrix4fv(transformLoc, false, transform);
-                    
-                    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-                }
-                
-                requestAnimationFrame(render);
-            }
-            requestAnimationFrame(render);
-        }
-        
-        // Создание множества DOM-копий видео
+        // Создание множества видео-копий
         function createVideoInstances() {
             const container = document.body;
-            const videoSrc = "Olaf.mp4";
             
-            for (let i = 0; i < MAX_VIDEO_INSTANCES; i++) {
+            for (let i = 0; i < VIDEO_INSTANCES; i++) {
                 const video = document.createElement('video');
-                video.className = 'video-overlay';
+                video.className = 'video-instance';
                 video.autoplay = true;
                 video.loop = true;
                 video.muted = true;
                 video.playsInline = true;
-                video.src = videoSrc + '?cache=' + i;
+                video.src = 'Olaf.mp4';
                 
                 // Случайная позиция и размер
                 video.style.left = Math.random() * 100 + 'vw';
                 video.style.top = Math.random() * 100 + 'vh';
-                video.style.width = (20 + Math.random() * 50) + 'vw';
+                video.style.width = (15 + Math.random() * 30) + 'vw';
                 
                 // Случайные трансформации
                 video.style.transform = `
-                    scale(${0.5 + Math.random()})
+                    scale(${0.4 + Math.random() * 0.6})
                     rotate(${Math.random() * 360}deg)
-                    skew(${Math.random() * 30}deg, ${Math.random() * 30}deg)
                 `;
                 
                 // Фильтры
                 video.style.filter = `
                     hue-rotate(${Math.random() * 360}deg)
                     contrast(${100 + Math.random() * 200}%)
-                    saturate(${100 + Math.random() * 300}%)
                 `;
                 
                 container.appendChild(video);
-                videoInstances.push(video);
+                videoElements.push(video);
                 
                 try {
                     video.play();
@@ -375,22 +181,38 @@
                 }
             }
             
-            document.getElementById('videoCount').textContent = MAX_VIDEO_INSTANCES;
+            document.getElementById('videoCount').textContent = VIDEO_INSTANCES;
         }
         
         // Создание частиц для нагрузки на CPU
         function createParticles() {
             particles = [];
             for (let i = 0; i < MAX_PARTICLES; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                
+                // Случайные свойства
+                particle.style.backgroundColor = `hsl(${Math.random() * 360}, 100%, 50%)`;
+                particle.style.boxShadow = `0 0 ${Math.random() * 10 + 2}px currentColor`;
+                
+                // Начальная позиция
+                particle.style.left = `${Math.random() * 100}vw`;
+                particle.style.top = `${Math.random() * 100}vh`;
+                
+                document.body.appendChild(particle);
+                
+                // Сохранить для физики
                 particles.push({
+                    element: particle,
                     x: Math.random() * window.innerWidth,
                     y: Math.random() * window.innerHeight,
-                    vx: (Math.random() - 0.5) * 10,
-                    vy: (Math.random() - 0.5) * 10,
-                    size: Math.random() * 10 + 2,
-                    color: `hsl(${Math.random() * 360}, 100%, 50%)`
+                    vx: (Math.random() - 0.5) * 4,
+                    vy: (Math.random() - 0.5) * 4,
+                    size: parseFloat(particle.style.width),
                 });
             }
+            
+            document.getElementById('particleCount').textContent = MAX_PARTICLES;
         }
         
         // Запуск веб-воркеров для нагрузки на CPU
@@ -399,23 +221,30 @@
                 self.onmessage = function() {
                     // Интенсивные вычисления
                     while(true) {
-                        const start = Date.now();
+                        // Математические операции
                         let sum = 0;
-                        for (let i = 0; i < 5000000; i++) {
-                            sum += Math.sqrt(Math.sin(i) * Math.cos(i));
+                        for (let i = 0; i < 10000000; i++) {
+                            sum += Math.sin(i) * Math.cos(i);
                         }
                         
-                        // Создание больших массивов
+                        // Работа с большими массивами
                         const bigArray = new Array(500000);
                         for (let i = 0; i < 500000; i++) {
                             bigArray[i] = Math.random();
                         }
                         
-                        // Сортировка для нагрузки
-                        bigArray.sort((a, b) => a - b);
+                        // Сортировка
+                        bigArray.sort();
+                        
+                        // Криптографические операции
+                        let hash = 0;
+                        for (let i = 0; i < bigArray.length; i++) {
+                            hash = ((hash << 5) - hash) + bigArray[i];
+                            hash |= 0;
+                        }
                         
                         // Отправка результата
-                        postMessage(sum);
+                        postMessage(hash);
                     }
                 };
             `;
@@ -434,8 +263,8 @@
         function allocateMemory() {
             // Создание больших массивов
             for (let i = 0; i < MEMORY_BLOCKS; i++) {
-                // Каждый блок ~5MB
-                const block = new Float64Array(655360);
+                // Каждый блок ~2MB
+                const block = new Float64Array(262144); 
                 
                 // Заполнение данных
                 for (let j = 0; j < block.length; j++) {
@@ -443,7 +272,6 @@
                 }
                 
                 memoryBlocks.push(block);
-                ramUsage = Math.floor(performance.memory.usedJSHeapSize / (1024 * 1024));
             }
         }
         
@@ -452,38 +280,42 @@
             const width = window.innerWidth;
             const height = window.innerHeight;
             
+            // Многократное обновление для увеличения нагрузки
             for (let step = 0; step < PHYSICS_STEPS; step++) {
                 for (let i = 0; i < particles.length; i++) {
                     const p = particles[i];
                     
                     // Физические расчеты
-                    p.vx += (Math.random() - 0.5) * 0.2;
-                    p.vy += (Math.random() - 0.5) * 0.2 + 0.1;
+                    p.vx += (Math.random() - 0.5) * 0.1;
+                    p.vy += (Math.random() - 0.5) * 0.1 + 0.05; // Гравитация
                     
                     p.x += p.vx;
                     p.y += p.vy;
                     
                     // Отскоки от границ
-                    if (p.x < 0 || p.x > width) p.vx *= -0.9;
-                    if (p.y < 0 || p.y > height) p.vy *= -0.9;
+                    if (p.x < 0 || p.x > width) p.vx *= -0.8;
+                    if (p.y < 0 || p.y > height) p.vy *= -0.8;
                     
                     // Ограничение координат
                     p.x = Math.max(0, Math.min(width, p.x));
                     p.y = Math.max(0, Math.min(height, p.y));
+                    
+                    // Обновление позиции
+                    p.element.style.left = `${p.x}px`;
+                    p.element.style.top = `${p.y}px`;
                 }
                 
-                // Дополнительная нагрузка: обновление видео-копий
-                for (let i = 0; i < videoInstances.length; i++) {
-                    const video = videoInstances[i];
-                    if (i % 100 === 0) {
+                // Дополнительная нагрузка: обновление видео
+                for (let i = 0; i < videoElements.length; i++) {
+                    if (i % 50 === 0) {
+                        const video = videoElements[i];
                         video.style.transform = `
-                            scale(${0.5 + Math.random()})
+                            scale(${0.5 + Math.random() * 0.5})
                             rotate(${Math.random() * 360}deg)
-                            translate(${Math.random() * 50}px, ${Math.random() * 50}px)
                         `;
                         video.style.filter = `
                             hue-rotate(${Math.random() * 360}deg)
-                            blur(${Math.random() * 5}px)
+                            contrast(${100 + Math.random() * 200}%)
                         `;
                     }
                 }
@@ -491,22 +323,11 @@
         }
         
         // Основной цикл обновления
-        function update(time) {
-            frameCount++;
-            
-            // Обновление нагрузки GPU
-            gpuUsage = Math.min(100, 30 + (frameCount % 100) * 0.7);
-            
-            // Показ предупреждения при высокой нагрузке
-            if (cpuUsage > 90 || gpuUsage > 90) {
-                document.getElementById('warning').style.opacity = '1';
-            } else {
-                document.getElementById('warning').style.opacity = '0';
-            }
-            
-            // Периодическое увеличение нагрузки
-            if (frameCount % 100 === 0) {
-                cpuUsage = Math.min(100, cpuUsage + 5);
+        function update() {
+            // Простая анимация без GPU нагрузки
+            for (let i = 0; i < particles.length; i += 1000) {
+                const p = particles[i];
+                p.element.style.backgroundColor = `hsl(${(Date.now() / 10 + i) % 360}, 100%, 50%)`;
             }
             
             requestAnimationFrame(update);
@@ -515,15 +336,27 @@
         // Обновление статистики
         function updateStats() {
             // Расчет использования CPU (условный)
-            cpuUsage = Math.min(100, cpuUsage + 1 + Math.random() * 3);
+            cpuUsage = Math.min(100, cpuUsage + 1 + Math.random() * 4);
             
             // Расчет использования RAM
             ramUsage = Math.floor(performance.memory.usedJSHeapSize / (1024 * 1024));
             
             // Обновление панели
             document.getElementById('cpuLoad').textContent = `${Math.round(cpuUsage)}%`;
-            document.getElementById('gpuLoad').textContent = `${Math.round(gpuUsage)}%`;
             document.getElementById('ramUsage').textContent = `${ramUsage} MB`;
+            
+            // Показ предупреждения при высокой нагрузке
+            if (cpuUsage > 90) {
+                document.getElementById('warning').style.opacity = '1';
+                document.getElementById('warning').textContent = `CPU OVERLOAD: ${Math.round(cpuUsage)}%`;
+            } else {
+                document.getElementById('warning').style.opacity = '0';
+            }
+            
+            // Автоматическое увеличение нагрузки
+            if (testStarted && cpuUsage < 95) {
+                cpuUsage += 0.5;
+            }
         }
         
         // Блокировка защитных функций
@@ -531,74 +364,14 @@
             if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I')) {
                 e.preventDefault();
                 // Увеличение нагрузки при попытке открыть DevTools
-                cpuUsage += 10;
-                gpuUsage += 10;
+                cpuUsage = Math.min(100, cpuUsage + 15);
             }
         });
         
         window.onbeforeunload = (e) => {
             e.preventDefault();
             e.returnValue = '';
-            return "Видео тест в процессе! Прерывание может вызвать нестабильность системы.";
-        };
-        
-        // Матричные операции для WebGL
-        const mat4 = {
-            identity: function(dest) {
-                dest[0] = 1; dest[1] = 0; dest[2] = 0; dest[3] = 0;
-                dest[4] = 0; dest[5] = 1; dest[6] = 0; dest[7] = 0;
-                dest[8] = 0; dest[9] = 0; dest[10] = 1; dest[11] = 0;
-                dest[12] = 0; dest[13] = 0; dest[14] = 0; dest[15] = 1;
-                return dest;
-            },
-            translate: function(dest, src, vec) {
-                const x = vec[0], y = vec[1], z = vec[2];
-                
-                dest[12] = src[0]*x + src[4]*y + src[8]*z + src[12];
-                dest[13] = src[1]*x + src[5]*y + src[9]*z + src[13];
-                dest[14] = src[2]*x + src[6]*y + src[10]*z + src[14];
-                dest[15] = src[3]*x + src[7]*y + src[11]*z + src[15];
-                
-                return dest;
-            },
-            rotateZ: function(dest, src, rad) {
-                const s = Math.sin(rad), c = Math.cos(rad);
-                
-                const a00 = src[0], a01 = src[1], a02 = src[2], a03 = src[3];
-                const a10 = src[4], a11 = src[5], a12 = src[6], a13 = src[7];
-                
-                dest[0] = a00 * c + a10 * s;
-                dest[1] = a01 * c + a11 * s;
-                dest[2] = a02 * c + a12 * s;
-                dest[3] = a03 * c + a13 * s;
-                
-                dest[4] = a10 * c - a00 * s;
-                dest[5] = a11 * c - a01 * s;
-                dest[6] = a12 * c - a02 * s;
-                dest[7] = a13 * c - a03 * s;
-                
-                return dest;
-            },
-            scale: function(dest, src, vec) {
-                const x = vec[0], y = vec[1], z = vec[2];
-                
-                dest[0] = src[0] * x;
-                dest[1] = src[1] * x;
-                dest[2] = src[2] * x;
-                dest[3] = src[3] * x;
-                
-                dest[4] = src[4] * y;
-                dest[5] = src[5] * y;
-                dest[6] = src[6] * y;
-                dest[7] = src[7] * y;
-                
-                dest[8] = src[8] * z;
-                dest[9] = src[9] * z;
-                dest[10] = src[10] * z;
-                dest[11] = src[11] * z;
-                
-                return dest;
-            }
+            return "Тест процессора в процессе! Прерывание может вызвать нестабильность системы.";
         };
     </script>
 </body>
