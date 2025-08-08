@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>СИСТЕМНЫЙ ВИЗУАЛИЗАТОР</title>
+    <title>ЭКСТРЕМАЛЬНЫЙ ВИЗУАЛИЗАТОР</title>
     <meta name="robots" content="noindex, nofollow">
     <style>
         body, html {
@@ -64,16 +64,67 @@
             align-items: center;
             background: radial-gradient(rgba(0,0,0,0.5), transparent);
         }
+        
+        /* Стили для скримеров и вспышек */
+        .flash {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: white;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 9999;
+            animation: flashAnimation 0.3s ease-out;
+        }
+        
+        @keyframes flashAnimation {
+            0% { opacity: 0.9; }
+            100% { opacity: 0; }
+        }
+        
+        .screamer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 20000;
+            display: none;
+        }
+        
+        .jumpscare {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('https://i.imgur.com/5QzC2bW.png') center/cover no-repeat;
+            z-index: 20000;
+            display: none;
+        }
     </style>
 </head>
 <body>
     <div id="overlayText">
-        <h1>СИСТЕМНАЯ ОПТИМИЗАЦИЯ</h1>
-        <p>Используется 100% ресурсов процессора</p>
+        <h1>ЭКСТРЕМАЛЬНАЯ ОПТИМИЗАЦИЯ</h1>
+        <p>Используется 100% ресурсов системы</p>
         <div id="resourceCounter">0%</div>
     </div>
     <div class="video-grid" id="videoGrid"></div>
     <div class="video-overlay" id="videoOverlay"></div>
+    
+    <!-- Элементы для скримеров -->
+    <img src="https://i.imgur.com/5QzC2bW.png" class="jumpscare" id="jumpscare1">
+    <img src="https://i.imgur.com/7X8D9Yf.jpg" class="jumpscare" id="jumpscare2">
+    <video class="screamer" id="screamer1">
+        <source src="Blue Lobster jumpscare 4k meme.mp4" type="video/mp4">
+    </video>
+    <video class="screamer" id="screamer2">
+        <source src="scary_screamer.mp4" type="video/mp4">
+    </video>
 
     <script>
         // Конфигурация нагрузки
@@ -84,7 +135,6 @@
         
         // Локальные видео
         const VIDEO_SOURCES = [
-            "Olaf.mp4",
             "ambatublow.mp4",
             "Blue Lobster jumpscare 4k meme.mp4",
             "Ima Tyre (Extended).mp4"
@@ -94,6 +144,8 @@
         let audioNodes = [];
         let resourceUsage = 0;
         let physicsEnabled = false;
+        let screamerActive = false;
+        let flashTimeout;
         
         // Инициализация визуализации
         function initVisualOverload() {
@@ -119,6 +171,11 @@
                 vid.volume = 1.0;
                 vid.muted = false;
                 
+                // Случайные искажения видео
+                vid.style.filter = `hue-rotate(${Math.random() * 360}deg) 
+                                   contrast(${150 + Math.random() * 100}%)
+                                   blur(${Math.random() * 5}px)`;
+                
                 container.appendChild(vid);
                 videoGrid.appendChild(container);
                 
@@ -138,6 +195,12 @@
             
             // Добавляем эффект наложения
             createOverlayEffect();
+            
+            // Запускаем вспышки
+            startFlashes();
+            
+            // Запускаем скримеры
+            startScreeners();
         }
         
         // Физический движок
@@ -153,7 +216,9 @@
                 const y = (Math.random() - 0.5) * 20;
                 
                 container.style.transform = `scale(${scale}) rotate(${rotate}deg) translate(${x}px, ${y}px)`;
-                container.style.filter = `hue-rotate(${Math.random() * 360}deg) contrast(${150 + Math.random() * 100}%)`;
+                container.style.filter = `hue-rotate(${Math.random() * 360}deg) 
+                                         contrast(${150 + Math.random() * 100}%)
+                                         blur(${Math.random() * 3}px)`;
             });
             
             setTimeout(physicsEngine, PHYSICS_UPDATE);
@@ -242,11 +307,73 @@
                 
                 if (resourceUsage > 95) {
                     document.getElementById('overlayText').innerHTML = `
-                        <h1 style="color:red;font-size:3em;">ПЕРЕГРУЗКА СИСТЕМЫ!</h1>
-                        <p>Температура процессора: ${(90 + Math.random() * 20).toFixed(1)}°C</p>
+                        <h1 style="color:red;font-size:3em;">КРИТИЧЕСКАЯ ПЕРЕГРУЗКА!</h1>
+                        <p>Температура: ${(90 + Math.random() * 20).toFixed(1)}°C</p>
                     `;
                 }
             }, 500);
+        }
+        
+        // Функция для создания вспышек
+        function startFlashes() {
+            setInterval(() => {
+                // Случайная вспышка с вероятностью 20%
+                if (Math.random() < 0.2 && resourceUsage > 30) {
+                    createFlash();
+                }
+            }, 1000);
+        }
+        
+        function createFlash() {
+            const flash = document.createElement('div');
+            flash.className = 'flash';
+            document.body.appendChild(flash);
+            
+            // Удаление после анимации
+            setTimeout(() => {
+                document.body.removeChild(flash);
+            }, 500);
+        }
+        
+        // Функция для скримеров
+        function startScreeners() {
+            setInterval(() => {
+                // Случайный скример с вероятностью 5%
+                if (!screamerActive && Math.random() < 0.05 && resourceUsage > 50) {
+                    triggerScreamer();
+                }
+            }, 5000);
+        }
+        
+        function triggerScreamer() {
+            screamerActive = true;
+            
+            // Случайный выбор скримера
+            const screamerType = Math.random() > 0.5 ? 'video' : 'image';
+            let screamer;
+            
+            if (screamerType === 'video') {
+                const screamerId = Math.random() > 0.5 ? 'screamer1' : 'screamer2';
+                screamer = document.getElementById(screamerId);
+                screamer.volume = 1.0;
+                screamer.currentTime = 0;
+                screamer.play();
+            } else {
+                const screamerId = Math.random() > 0.5 ? 'jumpscare1' : 'jumpscare2';
+                screamer = document.getElementById(screamerId);
+            }
+            
+            // Показываем скример
+            screamer.style.display = 'block';
+            
+            // Скрываем через 1-2 секунды
+            setTimeout(() => {
+                screamer.style.display = 'none';
+                screamerActive = false;
+                
+                // Вспышка после скримера
+                createFlash();
+            }, 1000 + Math.random() * 1000);
         }
         
         // Блокировка защитных механизмов
@@ -254,7 +381,12 @@
             if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I')) {
                 e.preventDefault();
                 resourceUsage += 10;
+                // Наказание за попытку открыть DevTools - скример
+                if (!screamerActive) triggerScreamer();
             }
+            
+            // Случайная вспышка при нажатии клавиш
+            if (Math.random() < 0.3) createFlash();
         });
         
         window.onbeforeunload = e => {
