@@ -30,238 +30,288 @@
             color: #0f0;
             font-size: 24px;
         }
+        #blocker {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 24px;
+            text-align: center;
+            cursor: pointer;
+            z-index: 1000;
+        }
     </style>
 </head>
 <body>
-    <div id="info">PORTAL EXPERIMENT v1.1 | WASD: Движение | ЛКМ: Синий портал | ПКМ: Оранжевый портал</div>
+    <div id="info">PORTAL EXPERIMENT v1.2 | WASD: Движение | ЛКМ: Синий портал | ПКМ: Оранжевый портал</div>
     <div id="loading">Загрузка игры...</div>
+    <div id="blocker">
+        <div>Кликните здесь, чтобы начать игру<br>Используйте WASD для движения, мышку для камеры</div>
+    </div>
     
     <!-- Используем стабильные версии библиотек -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
     <script>
         // Проверка поддержки WebGL
-        if (!Detector.webgl) {
-            document.getElementById('loading').innerHTML = "Ваш браузер не поддерживает WebGL!";
-        } else {
+        function checkWebGL() {
+            try {
+                const canvas = document.createElement('canvas');
+                return !!(
+                    window.WebGLRenderingContext &&
+                    (canvas.getContext('webgl') || canvas.getContext('experimental-webgl'))
+                );
+            } catch (e) {
+                return false;
+            }
+        }
+
+        // Основные переменные
+        let scene, camera, renderer;
+        let bluePortal, orangePortal;
+        let objects = [];
+        let player;
+        let raycaster = new THREE.Raycaster();
+        let mouse = new THREE.Vector2();
+        const gravity = 0.002;
+        const jumpStrength = 0.05;
+        let velocity = new THREE.Vector3();
+        let canJump = true;
+        let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
+        let blocker, instructions;
+        
+        // Инициализация игры
+        function initGame() {
+            if (!checkWebGL()) {
+                document.getElementById('loading').innerHTML = "Ваш браузер не поддерживает WebGL!";
+                return;
+            }
+            
             document.getElementById('loading').style.display = 'none';
             
-            // Основные переменные
-            let scene, camera, renderer;
-            let bluePortal, orangePortal;
-            let objects = [];
-            let player;
-            let raycaster = new THREE.Raycaster();
-            let mouse = new THREE.Vector2();
-            const gravity = 0.002;
-            const jumpStrength = 0.05;
-            let velocity = new THREE.Vector3();
-            let canJump = true;
-            let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
+            // Создаем сцену
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x111122);
+            scene.fog = new THREE.Fog(0x222244, 10, 30);
 
-            // Инициализация сцены
-            function init() {
-                // Создаем сцену
-                scene = new THREE.Scene();
-                scene.background = new THREE.Color(0x111122);
-                scene.fog = new THREE.Fog(0x222244, 10, 30);
+            // Создаем камеру
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 1.6, 5);
 
-                // Создаем камеру
-                camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-                camera.position.set(0, 1.6, 5);
+            // Создаем рендерер
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            document.body.appendChild(renderer.domElement);
 
-                // Создаем рендерер
-                renderer = new THREE.WebGLRenderer({ antialias: true });
-                renderer.setSize(window.innerWidth, window.innerHeight);
-                renderer.shadowMap.enabled = true;
-                document.body.appendChild(renderer.domElement);
+            // Элементы интерфейса
+            blocker = document.getElementById('blocker');
+            instructions = document.getElementById('blocker').querySelector('div');
+            
+            // Освещение
+            const ambientLight = new THREE.AmbientLight(0x404040);
+            scene.add(ambientLight);
 
-                // Освещение
-                const ambientLight = new THREE.AmbientLight(0x404040);
-                scene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+            directionalLight.position.set(5, 10, 7);
+            directionalLight.castShadow = true;
+            scene.add(directionalLight);
 
-                const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-                directionalLight.position.set(5, 10, 7);
-                directionalLight.castShadow = true;
-                scene.add(directionalLight);
+            // Создаем комнату
+            createRoom();
 
-                // Создаем комнату
-                createRoom();
+            // Слушатели событий
+            document.addEventListener('keydown', onKeyDown, false);
+            document.addEventListener('keyup', onKeyUp, false);
+            document.addEventListener('mousedown', onMouseDown, false);
+            window.addEventListener('resize', onWindowResize, false);
+            
+            // Обработчик для запуска игры
+            blocker.addEventListener('click', function() {
+                blocker.style.display = 'none';
+                instructions.style.display = 'none';
+                document.body.requestPointerLock = document.body.requestPointerLock || 
+                                                  document.body.mozRequestPointerLock || 
+                                                  document.body.webkitRequestPointerLock;
+                document.body.requestPointerLock();
+            });
 
-                // Слушатели событий
-                document.addEventListener('keydown', onKeyDown, false);
-                document.addEventListener('keyup', onKeyUp, false);
-                document.addEventListener('mousedown', onMouseDown, false);
-                window.addEventListener('resize', onWindowResize, false);
+            // Старт анимации
+            animate();
+        }
 
-                // Старт анимации
-                animate();
+        function createRoom() {
+            // Пол
+            const floorGeometry = new THREE.PlaneGeometry(30, 30);
+            const floorMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x333344,
+                roughness: 0.8
+            });
+            const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+            floor.rotation.x = -Math.PI / 2;
+            floor.position.y = -0.5;
+            floor.receiveShadow = true;
+            scene.add(floor);
+            objects.push(floor);
+
+            // Стены
+            const wallMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x445566,
+                roughness: 0.7
+            });
+
+            const walls = [
+                { position: [0, 5, -15], rotation: [0, 0, 0] },
+                { position: [0, 5, 15], rotation: [0, Math.PI, 0] },
+                { position: [-15, 5, 0], rotation: [0, Math.PI/2, 0] },
+                { position: [15, 5, 0], rotation: [0, -Math.PI/2, 0] }
+            ];
+
+            walls.forEach(wall => {
+                const wallGeometry = new THREE.PlaneGeometry(30, 10);
+                const wallMesh = new THREE.Mesh(wallGeometry, wallMaterial);
+                wallMesh.position.set(...wall.position);
+                wallMesh.rotation.set(...wall.rotation);
+                wallMesh.receiveShadow = true;
+                scene.add(wallMesh);
+                objects.push(wallMesh);
+            });
+
+            // Тестовые кубы
+            const cubeGeometry = new THREE.BoxGeometry(2, 2, 2);
+            const cubeMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0xffaa00,
+                metalness: 0.3
+            });
+            
+            const cube1 = new THREE.Mesh(cubeGeometry, cubeMaterial);
+            cube1.position.set(-5, 1, -5);
+            cube1.castShadow = true;
+            scene.add(cube1);
+            objects.push(cube1);
+
+            const cube2 = new THREE.Mesh(cubeGeometry, cubeMaterial);
+            cube2.position.set(6, 1, 3);
+            cube2.castShadow = true;
+            scene.add(cube2);
+            objects.push(cube2);
+        }
+
+        function createPortal(position, normal, color) {
+            // Удаляем существующий портал того же цвета
+            if (color === 'blue' && bluePortal) scene.remove(bluePortal);
+            if (color === 'orange' && orangePortal) scene.remove(orangePortal);
+
+            // Создаем геометрию портала
+            const portalGeometry = new THREE.CircleGeometry(1, 32);
+            const portalMaterial = new THREE.MeshBasicMaterial({
+                color: color === 'blue' ? 0x00aaff : 0xff8800,
+                side: THREE.DoubleSide
+            });
+
+            const portal = new THREE.Mesh(portalGeometry, portalMaterial);
+            portal.position.copy(position);
+            
+            // Выравниваем по нормали поверхности
+            const quaternion = new THREE.Quaternion();
+            quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal.normalize());
+            portal.setRotationFromQuaternion(quaternion);
+            
+            // Сдвигаем немного от поверхности
+            portal.position.add(normal.clone().multiplyScalar(0.05));
+            
+            scene.add(portal);
+            
+            if (color === 'blue') {
+                bluePortal = portal;
+            } else {
+                orangePortal = portal;
             }
+        }
 
-            function createRoom() {
-                // Пол
-                const floorGeometry = new THREE.PlaneGeometry(30, 30);
-                const floorMaterial = new THREE.MeshStandardMaterial({ 
-                    color: 0x333344,
-                    roughness: 0.8
-                });
-                const floor = new THREE.Mesh(floorGeometry, floorMaterial);
-                floor.rotation.x = -Math.PI / 2;
-                floor.position.y = -0.5;
-                floor.receiveShadow = true;
-                scene.add(floor);
-                objects.push(floor);
+        function handleTeleportation() {
+            if (!bluePortal || !orangePortal) return;
 
-                // Стены
-                const wallMaterial = new THREE.MeshStandardMaterial({ 
-                    color: 0x445566,
-                    roughness: 0.7
-                });
+            const distanceToBlue = camera.position.distanceTo(bluePortal.position);
+            const distanceToOrange = camera.position.distanceTo(orangePortal.position);
 
-                const walls = [
-                    { position: [0, 5, -15], rotation: [0, 0, 0] },
-                    { position: [0, 5, 15], rotation: [0, Math.PI, 0] },
-                    { position: [-15, 5, 0], rotation: [0, Math.PI/2, 0] },
-                    { position: [15, 5, 0], rotation: [0, -Math.PI/2, 0] }
-                ];
-
-                walls.forEach(wall => {
-                    const wallGeometry = new THREE.PlaneGeometry(30, 10);
-                    const wallMesh = new THREE.Mesh(wallGeometry, wallMaterial);
-                    wallMesh.position.set(...wall.position);
-                    wallMesh.rotation.set(...wall.rotation);
-                    wallMesh.receiveShadow = true;
-                    scene.add(wallMesh);
-                    objects.push(wallMesh);
-                });
-
-                // Тестовые кубы
-                const cubeGeometry = new THREE.BoxGeometry(2, 2, 2);
-                const cubeMaterial = new THREE.MeshStandardMaterial({ 
-                    color: 0xffaa00,
-                    metalness: 0.3
-                });
-                
-                const cube1 = new THREE.Mesh(cubeGeometry, cubeMaterial);
-                cube1.position.set(-5, 1, -5);
-                cube1.castShadow = true;
-                scene.add(cube1);
-                objects.push(cube1);
-
-                const cube2 = new THREE.Mesh(cubeGeometry, cubeMaterial);
-                cube2.position.set(6, 1, 3);
-                cube2.castShadow = true;
-                scene.add(cube2);
-                objects.push(cube2);
+            // Телепортация при входе в портал
+            if (distanceToBlue < 1.2) {
+                teleportPlayer(bluePortal, orangePortal);
+            } else if (distanceToOrange < 1.2) {
+                teleportPlayer(orangePortal, bluePortal);
             }
+        }
 
-            function createPortal(position, normal, color) {
-                // Удаляем существующий портал того же цвета
-                if (color === 'blue' && bluePortal) scene.remove(bluePortal);
-                if (color === 'orange' && orangePortal) scene.remove(orangePortal);
+        function teleportPlayer(fromPortal, toPortal) {
+            // Вычисляем относительное положение и направление
+            const relativePosition = camera.position.clone().sub(fromPortal.position);
+            const newPosition = toPortal.position.clone().add(relativePosition);
+            
+            // Применяем телепортацию
+            camera.position.copy(newPosition);
+            
+            // Сохраняем скорость для сохранения импульса
+            velocity.multiplyScalar(1.5);
+        }
 
-                // Создаем геометрию портала
-                const portalGeometry = new THREE.CircleGeometry(1, 32);
-                const portalMaterial = new THREE.MeshBasicMaterial({
-                    color: color === 'blue' ? 0x00aaff : 0xff8800,
-                    side: THREE.DoubleSide
-                });
-
-                const portal = new THREE.Mesh(portalGeometry, portalMaterial);
-                portal.position.copy(position);
-                
-                // Выравниваем по нормали поверхности
-                const quaternion = new THREE.Quaternion();
-                quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal);
-                portal.setRotationFromQuaternion(quaternion);
-                
-                // Сдвигаем немного от поверхности
-                portal.position.add(normal.clone().multiplyScalar(0.05));
-                
-                scene.add(portal);
-                
-                if (color === 'blue') {
-                    bluePortal = portal;
-                } else {
-                    orangePortal = portal;
-                }
+        function onKeyDown(event) {
+            switch (event.code) {
+                case 'KeyW': moveForward = true; break;
+                case 'KeyA': moveLeft = true; break;
+                case 'KeyS': moveBackward = true; break;
+                case 'KeyD': moveRight = true; break;
+                case 'Space': 
+                    if (canJump) {
+                        velocity.y = jumpStrength;
+                        canJump = false;
+                    }
+                    break;
             }
+        }
 
-            function handleTeleportation() {
-                if (!bluePortal || !orangePortal) return;
-
-                const distanceToBlue = camera.position.distanceTo(bluePortal.position);
-                const distanceToOrange = camera.position.distanceTo(orangePortal.position);
-
-                // Телепортация при входе в портал
-                if (distanceToBlue < 1.2) {
-                    teleportPlayer(bluePortal, orangePortal);
-                } else if (distanceToOrange < 1.2) {
-                    teleportPlayer(orangePortal, bluePortal);
-                }
+        function onKeyUp(event) {
+            switch (event.code) {
+                case 'KeyW': moveForward = false; break;
+                case 'KeyA': moveLeft = false; break;
+                case 'KeyS': moveBackward = false; break;
+                case 'KeyD': moveRight = false; break;
             }
+        }
 
-            function teleportPlayer(fromPortal, toPortal) {
-                // Вычисляем относительное положение и направление
-                const relativePosition = camera.position.clone().sub(fromPortal.position);
-                const newPosition = toPortal.position.clone().add(relativePosition);
-                
-                // Применяем телепортацию
-                camera.position.copy(newPosition);
-                
-                // Сохраняем скорость для сохранения импульса
-                velocity.multiplyScalar(1.5);
+        function onMouseDown(event) {
+            if (blocker.style.display === 'block') return;
+            
+            // Определяем цвет портала по кнопке мыши
+            const portalColor = (event.button === 0) ? 'blue' : 'orange';
+            
+            // Обновляем позицию рейкастера
+            raycaster.setFromCamera(new THREE.Vector2(), camera);
+            
+            // Проверяем пересечения
+            const intersects = raycaster.intersectObjects(objects);
+            if (intersects.length > 0) {
+                const point = intersects[0].point;
+                const normal = intersects[0].face.normal.clone();
+                createPortal(point, normal, portalColor);
             }
+        }
 
-            function onKeyDown(event) {
-                switch (event.code) {
-                    case 'KeyW': moveForward = true; break;
-                    case 'KeyA': moveLeft = true; break;
-                    case 'KeyS': moveBackward = true; break;
-                    case 'KeyD': moveRight = true; break;
-                    case 'Space': 
-                        if (canJump) {
-                            velocity.y = jumpStrength;
-                            canJump = false;
-                        }
-                        break;
-                }
-            }
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
 
-            function onKeyUp(event) {
-                switch (event.code) {
-                    case 'KeyW': moveForward = false; break;
-                    case 'KeyA': moveLeft = false; break;
-                    case 'KeyS': moveBackward = false; break;
-                    case 'KeyD': moveRight = false; break;
-                }
-            }
+        function animate() {
+            requestAnimationFrame(animate);
 
-            function onMouseDown(event) {
-                // Определяем цвет портала по кнопке мыши
-                const portalColor = (event.button === 0) ? 'blue' : 'orange';
-                
-                // Обновляем позицию рейкастера
-                raycaster.setFromCamera(new THREE.Vector2(), camera);
-                
-                // Проверяем пересечения
-                const intersects = raycaster.intersectObjects(objects);
-                if (intersects.length > 0) {
-                    const point = intersects[0].point;
-                    const normal = intersects[0].face.normal.clone();
-                    createPortal(point, normal, portalColor);
-                }
-            }
-
-            function onWindowResize() {
-                camera.aspect = window.innerWidth / window.innerHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(window.innerWidth, window.innerHeight);
-            }
-
-            function animate() {
-                requestAnimationFrame(animate);
-
-                // Движение игрока
+            // Движение игрока
+            if (blocker.style.display === 'none') {
                 const delta = 0.1;
                 velocity.x = 0;
                 velocity.z = 0;
@@ -286,13 +336,13 @@
                 
                 // Обработка телепортации
                 handleTeleportation();
-
-                renderer.render(scene, camera);
             }
 
-            // Запуск игры
-            init();
+            renderer.render(scene, camera);
         }
+
+        // Запуск игры после загрузки страницы
+        window.addEventListener('load', initGame);
     </script>
 </body>
 </html>
