@@ -1,831 +1,307 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Half-Life 1: Black Mesa Experience</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/PointerLockControls.min.js"></script>
+    <title>Portal-like 3D Game</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            overflow: hidden;
-            background: #000;
-            font-family: 'Arial', sans-serif;
-            color: #e0e0e0;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            cursor: none;
-        }
-        
-        #gameContainer {
-            position: relative;
-            width: 100%;
-            height: 100%;
-        }
-        
-        #gameCanvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-        }
-        
-        #uiContainer {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 10;
-        }
-        
-        .hl1-hud {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            background: rgba(0, 0, 0, 0.7);
-            border: 2px solid #4a752c;
-            padding: 10px;
-            border-radius: 5px;
+        body { 
+            margin: 0; 
+            overflow: hidden; 
             font-family: 'Courier New', monospace;
         }
-        
-        .health-bar {
-            width: 200px;
-            height: 20px;
-            background: rgba(50, 50, 50, 0.7);
-            border: 1px solid #333;
-            margin-bottom: 5px;
-            position: relative;
+        canvas { 
+            display: block; 
         }
-        
-        .health-fill {
-            height: 100%;
+        #info {
+            position: absolute;
+            top: 10px;
             width: 100%;
-            background: linear-gradient(90deg, #f00, #ff4500);
-            transition: width 0.3s;
-        }
-        
-        .weapon-info {
-            display: flex;
-            align-items: center;
-            margin-top: 10px;
-        }
-        
-        .weapon-icon {
-            width: 40px;
-            height: 40px;
-            background: rgba(100, 100, 100, 0.5);
-            border: 1px solid #4a752c;
-            margin-right: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-        }
-        
-        .weapon-name {
-            font-size: 18px;
-            color: #ffa500;
-        }
-        
-        .ammo-count {
-            font-size: 24px;
-            color: #ff0;
-            margin-left: auto;
-        }
-        
-        .crosshair {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 6px;
-            height: 6px;
-            background: rgba(255, 255, 255, 0.8);
-            border: 1px solid #000;
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            pointer-events: none;
-        }
-        
-        #startScreen {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(rgba(0, 0, 0, 0.9), rgba(0, 30, 0, 0.8)), 
-                        url('https://i.imgur.com/5QzC2bW.png') center/cover;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 20;
-        }
-        
-        .hl1-logo {
-            font-size: 72px;
-            font-weight: bold;
-            color: #ffa500;
-            text-shadow: 0 0 10px rgba(255, 165, 0, 0.5);
-            margin-bottom: 30px;
-            letter-spacing: 2px;
-            background: linear-gradient(45deg, #ffa500, #ff8c00, #ff4500);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        
-        .start-btn {
-            background: linear-gradient(45deg, #4a752c, #6b8e23);
-            color: white;
-            border: none;
-            padding: 15px 40px;
-            font-size: 24px;
-            font-weight: bold;
-            border-radius: 5px;
-            cursor: pointer;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            margin-top: 30px;
-            transition: all 0.3s;
-            box-shadow: 0 0 15px rgba(74, 117, 44, 0.5);
-            pointer-events: auto;
-        }
-        
-        .start-btn:hover {
-            transform: scale(1.05);
-            box-shadow: 0 0 25px rgba(74, 117, 44, 0.8);
-        }
-        
-        .start-btn:active {
-            transform: scale(0.95);
-        }
-        
-        .game-overlay {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            background: rgba(20, 20, 20, 0.7);
-            padding: 15px;
-            border-radius: 5px;
-            border-left: 4px solid #ffa500;
-            max-width: 400px;
-        }
-        
-        .objective {
-            font-size: 18px;
-            margin-bottom: 10px;
-            color: #ffa500;
-        }
-        
-        .objective-text {
-            line-height: 1.5;
-        }
-        
-        .hud-message {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.7);
-            padding: 15px 30px;
-            border-radius: 5px;
-            border: 2px solid #ffa500;
-            font-size: 24px;
-            color: #fff;
             text-align: center;
-            display: none;
-            z-index: 15;
-        }
-        
-        #enemyRadar {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            width: 120px;
-            height: 120px;
-            background: rgba(0, 20, 0, 0.7);
-            border: 2px solid #4a752c;
-            border-radius: 50%;
-        }
-        
-        .scientist {
-            position: absolute;
-            width: 40px;
-            height: 40px;
-            background: rgba(0, 100, 255, 0.3);
-            border-radius: 50%;
-            display: none;
+            color: #0f0;
+            text-shadow: 0 0 5px #0f0;
+            z-index: 100;
             pointer-events: none;
-            z-index: 5;
         }
     </style>
 </head>
 <body>
-    <div id="gameContainer">
-        <canvas id="gameCanvas"></canvas>
-        
-        <div id="uiContainer">
-            <div class="hl1-hud">
-                <div class="health-bar">
-                    <div class="health-fill" id="healthBar"></div>
-                </div>
-                <div class="weapon-info">
-                    <div class="weapon-icon">C</div>
-                    <div class="weapon-name">CROWBAR</div>
-                    <div class="ammo-count" id="ammoCount">-</div>
-                </div>
-            </div>
-            
-            <div class="crosshair"></div>
-            
-            <div class="game-overlay">
-                <div class="objective">OBJECTIVE:</div>
-                <div class="objective-text">Reach the Lambda Complex. Avoid or neutralize hostile creatures.</div>
-            </div>
-            
-            <div class="hud-message" id="hudMessage">HOSTILE ENTITY DETECTED!</div>
-            
-            <div id="enemyRadar"></div>
-            
-            <div id="startScreen">
-                <div class="hl1-logo">HALF-LIFE</div>
-                <div style="font-size: 24px; margin-bottom: 20px; text-align: center; max-width: 600px;">
-                    Black Mesa Research Facility<br>You are Gordon Freeman, a theoretical physicist.
-                </div>
-                <button class="start-btn" id="startBtn">BEGIN EXPERIMENT</button>
-            </div>
-        </div>
-    </div>
-
+    <div id="info">PORTAL EXPERIMENT v1.0 | WASD: Движение | ЛКМ: Синий портал | ПКМ: Оранжевый портал</div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128/examples/js/controls/PointerLockControls.js"></script>
     <script>
-        // Элементы интерфейса
-        const startScreen = document.getElementById('startScreen');
-        const startBtn = document.getElementById('startBtn');
-        const healthBar = document.getElementById('healthBar');
-        const ammoCount = document.getElementById('ammoCount');
-        const hudMessage = document.getElementById('hudMessage');
-        
-        // Игровые переменные
-        let playerHealth = 100;
-        let gameStarted = false;
-        let currentWeapon = 'crowbar';
-        let enemies = [];
-        let scientists = [];
-        
-        // Инициализация Three.js
+        // Основные переменные
         let scene, camera, renderer, controls;
+        let bluePortal, orangePortal;
         let objects = [];
-        let raycaster, mouse;
-        
-        // Константы игры
-        const ENEMY_TYPES = ['headcrab', 'zombie', 'vortigaunt', 'hgrunt'];
-        const WEAPONS = {
-            crowbar: { name: 'CROWBAR', ammo: '-' },
-            glock: { name: '9MM PISTOL', ammo: 12 },
-            shotgun: { name: 'SHOTGUN', ammo: 6 },
-            crossbow: { name: 'CROSSBOW', ammo: 5 }
-        };
-        
-        // Инициализация игры
-        function initGame() {
-            // Создание сцены
+        let player;
+        let raycaster = new THREE.Raycaster();
+        let mouse = new THREE.Vector2();
+        const gravity = 0.002;
+        const jumpStrength = 0.05;
+        let velocity = new THREE.Vector3();
+        let canJump = true;
+
+        // Инициализация сцены
+        function init() {
+            // Создаем сцену
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x223344);
-            scene.fog = new THREE.Fog(0x223344, 20, 100);
-            
-            // Создание камеры
+            scene.background = new THREE.Color(0x111122);
+            scene.fog = new THREE.Fog(0x222244, 10, 30);
+
+            // Создаем камеру
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(0, 2, 0);
-            
-            // Создание рендерера
-            renderer = new THREE.WebGLRenderer({ 
-                canvas: document.getElementById('gameCanvas'),
-                antialias: true 
-            });
+            camera.position.set(0, 1.6, 5);
+
+            // Создаем рендерер
+            renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.shadowMap.enabled = true;
-            
+            document.body.appendChild(renderer.domElement);
+
+            // Настройка управления
+            controls = new THREE.PointerLockControls(camera, document.body);
+            document.body.addEventListener('click', () => {
+                controls.lock();
+            });
+
             // Освещение
-            const ambientLight = new THREE.AmbientLight(0x444444);
+            const ambientLight = new THREE.AmbientLight(0x404040);
             scene.add(ambientLight);
-            
-            const directionalLight = new THREE.DirectionalLight(0xffeecc, 0.8);
-            directionalLight.position.set(10, 20, 10);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+            directionalLight.position.set(5, 10, 7);
             directionalLight.castShadow = true;
             scene.add(directionalLight);
-            
-            // Создание мира Чёрной Мезы
-            createBlackMesaEnvironment();
-            
-            // Создание ракурса от первого лица
-            initFPSControls();
-            
-            // Создание врагов и персонажей
-            createEnemies();
-            createScientists();
-            
-            // Запуск анимации
+
+            // Создаем комнату
+            createRoom();
+
+            // Создаем игрока (коллизия)
+            player = {
+                collider: new THREE.Sphere(new THREE.Vector3(0, 0, 0), 0.5,
+                velocity: new THREE.Vector3(),
+                onGround: false
+            };
+
+            // Слушатели событий
+            document.addEventListener('keydown', onKeyDown, false);
+            document.addEventListener('keyup', onKeyUp, false);
+            document.addEventListener('mousedown', onMouseDown, false);
+            window.addEventListener('resize', onWindowResize, false);
+
+            // Старт анимации
             animate();
-            
-            // Обработка событий
-            window.addEventListener('resize', onWindowResize);
-            document.addEventListener('click', onMouseClick);
-            document.addEventListener('keydown', onKeyDown);
         }
-        
-        // Создание среды Чёрной Мезы
-        function createBlackMesaEnvironment() {
-            // Текстуры
-            const textureLoader = new THREE.TextureLoader();
-            const groundTexture = textureLoader.load('https://i.imgur.com/5QzC2bW.png');
-            groundTexture.wrapS = groundTexture.wrapT = THREE.RepeatWrapping;
-            groundTexture.repeat.set(20, 20);
-            
-            // Земля
-            const groundGeometry = new THREE.PlaneGeometry(100, 100);
-            const groundMaterial = new THREE.MeshStandardMaterial({ 
-                map: groundTexture,
-                roughness: 0.9,
-                metalness: 0.1
-            });
-            const ground = new THREE.Mesh(groundGeometry, groundMaterial);
-            ground.rotation.x = -Math.PI / 2;
-            ground.receiveShadow = true;
-            scene.add(ground);
-            
-            // Лабораторные коридоры
-            for (let i = 0; i < 10; i++) {
-                createLabCorridor(
-                    Math.random() * 80 - 40,
-                    0,
-                    Math.random() * 80 - 40
-                );
-            }
-            
-            // Научное оборудование
-            for (let i = 0; i < 20; i++) {
-                createLabEquipment(
-                    Math.random() * 70 - 35,
-                    0.5,
-                    Math.random() * 70 - 35
-                );
-            }
-            
-            // Трубы и вентиляция
-            for (let i = 0; i < 15; i++) {
-                createPipes(
-                    Math.random() * 80 - 40,
-                    3,
-                    Math.random() * 80 - 40
-                );
-            }
-            
-            // Комплекс Лямбда
-            createLambdaComplex(40, 0, -30);
-        }
-        
-        // Создание лабораторного коридора
-        function createLabCorridor(x, y, z) {
-            const corridorGroup = new THREE.Group();
-            
-            // Стены
-            const wallMaterial = new THREE.MeshStandardMaterial({ 
-                color: 0x606060,
+
+        function createRoom() {
+            // Пол
+            const floorGeometry = new THREE.PlaneGeometry(30, 30);
+            const floorMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x333344,
                 roughness: 0.8
             });
-            
-            for (let i = 0; i < 4; i++) {
-                const wallGeometry = new THREE.BoxGeometry(10, 5, 1);
-                const wall = new THREE.Mesh(wallGeometry, wallMaterial);
-                
-                const angle = i * Math.PI / 2;
-                wall.position.set(
-                    x + 5 * Math.cos(angle),
-                    y + 2.5,
-                    z + 5 * Math.sin(angle)
-                );
-                
-                wall.rotation.y = angle;
-                wall.castShadow = true;
-                corridorGroup.add(wall);
-            }
-            
-            // Пол
-            const floorGeometry = new THREE.BoxGeometry(8, 0.2, 8);
-            const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x444444 });
             const floor = new THREE.Mesh(floorGeometry, floorMaterial);
-            floor.position.set(x, y, z);
-            corridorGroup.add(floor);
-            
-            scene.add(corridorGroup);
-        }
-        
-        // Создание лабораторного оборудования
-        function createLabEquipment(x, y, z) {
-            const equipmentGroup = new THREE.Group();
-            
-            // Типы оборудования
-            const equipmentTypes = [
-                { type: 'console', size: [1.5, 1, 0.8], color: 0x333333 },
-                { type: 'monitor', size: [0.8, 0.6, 0.1], color: 0x111111 },
-                { type: 'server', size: [0.6, 1.2, 0.6], color: 0x222222 },
-                { type: 'device', size: [0.4, 0.4, 0.4], color: 0x444444 }
+            floor.rotation.x = -Math.PI / 2;
+            floor.position.y = -0.5;
+            floor.receiveShadow = true;
+            scene.add(floor);
+            objects.push(floor);
+
+            // Стены
+            const wallMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x445566,
+                roughness: 0.7
+            });
+
+            const walls = [
+                { position: [0, 5, -15], rotation: [0, 0, 0] },
+                { position: [0, 5, 15], rotation: [0, Math.PI, 0] },
+                { position: [-15, 5, 0], rotation: [0, Math.PI/2, 0] },
+                { position: [15, 5, 0], rotation: [0, -Math.PI/2, 0] }
             ];
+
+            walls.forEach(wall => {
+                const wallGeometry = new THREE.PlaneGeometry(30, 10);
+                const wallMesh = new THREE.Mesh(wallGeometry, wallMaterial);
+                wallMesh.position.set(...wall.position);
+                wallMesh.rotation.set(...wall.rotation);
+                wallMesh.receiveShadow = true;
+                scene.add(wallMesh);
+                objects.push(wallMesh);
+            });
+
+            // Тестовые кубы
+            const cubeGeometry = new THREE.BoxGeometry(2, 2, 2);
+            const cubeMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0xffaa00,
+                metalness: 0.3
+            });
             
-            const type = equipmentTypes[Math.floor(Math.random() * equipmentTypes.length)];
-            const geometry = new THREE.BoxGeometry(...type.size);
-            const material = new THREE.MeshStandardMaterial({ color: type.color });
-            const equipment = new THREE.Mesh(geometry, material);
-            
-            equipment.position.set(x, y + type.size[1]/2, z);
-            equipment.rotation.y = Math.random() * Math.PI;
-            equipment.castShadow = true;
-            equipmentGroup.add(equipment);
-            
-            // Экран монитора
-            if (type.type === 'monitor') {
-                const screenGeometry = new THREE.PlaneGeometry(type.size[0]*0.8, type.size[1]*0.8);
-                const screenMaterial = new THREE.MeshBasicMaterial({ 
-                    color: 0x00ff00,
-                    emissive: 0x00aa00,
-                    side: THREE.DoubleSide
-                });
-                const screen = new THREE.Mesh(screenGeometry, screenMaterial);
-                screen.position.set(0, 0, type.size[2]/2 + 0.01);
-                equipment.add(screen);
-            }
-            
-            scene.add(equipmentGroup);
+            const cube1 = new THREE.Mesh(cubeGeometry, cubeMaterial);
+            cube1.position.set(-5, 1, -5);
+            cube1.castShadow = true;
+            scene.add(cube1);
+            objects.push(cube1);
+
+            const cube2 = new THREE.Mesh(cubeGeometry, cubeMaterial);
+            cube2.position.set(6, 1, 3);
+            cube2.castShadow = true;
+            scene.add(cube2);
+            objects.push(cube2);
         }
-        
-        // Создание труб
-        function createPipes(x, y, z) {
-            const pipeGroup = new THREE.Group();
-            
-            const pipeMaterial = new THREE.MeshStandardMaterial({ color: 0x808080 });
-            
-            // Вертикальные трубы
-            for (let i = 0; i < 3; i++) {
-                const pipeGeometry = new THREE.CylinderGeometry(0.2, 0.2, 4, 16);
-                const pipe = new THREE.Mesh(pipeGeometry, pipeMaterial);
-                pipe.position.set(
-                    x + (i - 1) * 1.5,
-                    y + 2,
-                    z
-                );
-                pipe.castShadow = true;
-                pipeGroup.add(pipe);
-            }
-            
-            // Горизонтальные соединения
-            const connectorGeometry = new THREE.CylinderGeometry(0.2, 0.2, 3, 16);
-            const connector = new THREE.Mesh(connectorGeometry, pipeMaterial);
-            connector.position.set(x, y + 4, z);
-            connector.rotation.z = Math.PI / 2;
-            connector.castShadow = true;
-            pipeGroup.add(connector);
-            
-            scene.add(pipeGroup);
-        }
-        
-        // Создание комплекса Лямбда
-        function createLambdaComplex(x, y, z) {
-            const lambdaGroup = new THREE.Group();
-            
-            // Основание
-            const baseGeometry = new THREE.BoxGeometry(15, 2, 15);
-            const baseMaterial = new THREE.MeshStandardMaterial({ color: 0x333333 });
-            const base = new THREE.Mesh(baseGeometry, baseMaterial);
-            base.position.set(x, y + 1, z);
-            lambdaGroup.add(base);
-            
-            // Основная структура
-            const mainGeometry = new THREE.CylinderGeometry(5, 7, 20, 6);
-            const mainMaterial = new THREE.MeshStandardMaterial({ color: 0x444444 });
-            const main = new THREE.Mesh(mainGeometry, mainMaterial);
-            main.position.set(x, y + 12, z);
-            lambdaGroup.add(main);
-            
-            // Лямбда-символ
-            const lambdaGeometry = new THREE.BoxGeometry(6, 1, 0.5);
-            const lambdaMaterial = new THREE.MeshBasicMaterial({ 
-                color: 0xffff00,
-                emissive: 0xffaa00,
-                emissiveIntensity: 0.8
+
+        function createPortal(position, normal, color) {
+            // Удаляем существующий портал того же цвета
+            if (color === 'blue' && bluePortal) scene.remove(bluePortal);
+            if (color === 'orange' && orangePortal) scene.remove(orangePortal);
+
+            // Создаем геометрию портала
+            const portalGeometry = new THREE.CircleGeometry(1, 32);
+            const portalMaterial = new THREE.MeshBasicMaterial({
+                color: color === 'blue' ? 0x00aaff : 0xff8800,
+                side: THREE.DoubleSide
             });
-            const lambda = new THREE.Mesh(lambdaGeometry, lambdaMaterial);
-            lambda.position.set(x, y + 18, z + 5.1);
-            lambda.rotation.x = Math.PI / 4;
-            lambdaGroup.add(lambda);
+
+            const portal = new THREE.Mesh(portalGeometry, portalMaterial);
+            portal.position.copy(position);
             
-            // Свет
-            const light = new THREE.PointLight(0xffff00, 1, 30);
-            light.position.set(x, y + 18, z + 5);
-            scene.add(light);
+            // Выравниваем по нормали поверхности
+            const quaternion = new THREE.Quaternion();
+            quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal);
+            portal.setRotationFromQuaternion(quaternion);
             
-            scene.add(lambdaGroup);
-        }
-        
-        // Инициализация управления от первого лица
-        function initFPSControls() {
-            controls = new THREE.PointerLockControls(camera, document.body);
+            // Сдвигаем немного от поверхности
+            portal.position.add(normal.clone().multiplyScalar(0.05));
             
-            // Обработчик блокировки указателя
-            document.addEventListener('click', function() {
-                if (gameStarted && !controls.isLocked) {
-                    controls.lock();
-                }
-            }, false);
+            scene.add(portal);
             
-            controls.addEventListener('lock', function() {
-                document.body.style.cursor = 'none';
-            });
-            
-            controls.addEventListener('unlock', function() {
-                document.body.style.cursor = 'auto';
-            });
-            
-            // Движение игрока
-            const moveSpeed = 0.2;
-            const keys = {};
-            
-            document.addEventListener('keydown', function(event) {
-                keys[event.code] = true;
-            });
-            
-            document.addEventListener('keyup', function(event) {
-                keys[event.code] = false;
-            });
-            
-            // Обновление движения
-            function updatePlayerMovement() {
-                if (controls.isLocked) {
-                    if (keys['KeyW']) {
-                        controls.moveForward(moveSpeed);
-                    }
-                    if (keys['KeyS']) {
-                        controls.moveForward(-moveSpeed);
-                    }
-                    if (keys['KeyA']) {
-                        controls.moveRight(-moveSpeed);
-                    }
-                    if (keys['KeyD']) {
-                        controls.moveRight(moveSpeed);
-                    }
-                    if (keys['Space']) {
-                        // Простой прыжок
-                        camera.position.y += 0.2;
-                        setTimeout(() => {
-                            camera.position.y -= 0.2;
-                        }, 300);
-                    }
-                }
-                
-                requestAnimationFrame(updatePlayerMovement);
-            }
-            
-            updatePlayerMovement();
-        }
-        
-        // Создание врагов
-        function createEnemies() {
-            for (let i = 0; i < 8; i++) {
-                const type = ENEMY_TYPES[Math.floor(Math.random() * ENEMY_TYPES.length)];
-                const x = Math.random() * 60 - 30;
-                const z = Math.random() * 60 - 30;
-                
-                enemies.push({
-                    type: type,
-                    position: { x: x, y: 0, z: z },
-                    health: type === 'hgrunt' ? 100 : 75,
-                    detectedPlayer: false
-                });
+            if (color === 'blue') {
+                bluePortal = portal;
+            } else {
+                orangePortal = portal;
             }
         }
-        
-        // Создание учёных
-        function createScientists() {
-            for (let i = 0; i < 5; i++) {
-                const x = Math.random() * 60 - 30;
-                const z = Math.random() * 60 - 30;
-                
-                scientists.push({
-                    position: { x: x, y: 0, z: z },
-                    state: 'idle' // idle, scared, dead
-                });
+
+        function handleTeleportation() {
+            if (!bluePortal || !orangePortal) return;
+
+            const distanceToBlue = camera.position.distanceTo(bluePortal.position);
+            const distanceToOrange = camera.position.distanceTo(orangePortal.position);
+
+            // Телепортация при входе в портал
+            if (distanceToBlue < 1.2) {
+                teleportPlayer(bluePortal, orangePortal);
+            } else if (distanceToOrange < 1.2) {
+                teleportPlayer(orangePortal, bluePortal);
             }
         }
-        
-        // Обновление врагов
-        function updateEnemies() {
-            const playerPos = camera.position;
+
+        function teleportPlayer(fromPortal, toPortal) {
+            // Вычисляем относительное положение и направление
+            const relativePosition = camera.position.clone().sub(fromPortal.position);
+            const newPosition = toPortal.position.clone().add(relativePosition);
             
-            enemies.forEach((enemy, index) => {
-                // Простой ИИ: если игрок близко, двигаться к нему
-                const dx = playerPos.x - enemy.position.x;
-                const dz = playerPos.z - enemy.position.z;
-                const distance = Math.sqrt(dx * dx + dz * dz);
-                
-                if (distance < 30) {
-                    enemy.detectedPlayer = true;
-                    
-                    // Движение к игроку
-                    if (distance > 5) {
-                        enemy.position.x += dx * 0.01;
-                        enemy.position.z += dz * 0.01;
-                    }
-                    
-                    // Случайная атака
-                    if (Math.random() < 0.01 && distance < 20) {
-                        playerHealth -= enemy.type === 'hgrunt' ? 15 : 10;
-                        updateHealthBar();
-                        
-                        if (playerHealth <= 0) {
-                            showHudMessage("YOU ARE DEAD", 3000);
-                            resetPlayer();
-                        }
-                    }
-                } else {
-                    enemy.detectedPlayer = false;
-                }
-            });
-        }
-        
-        // Обновление учёных
-        function updateScientists() {
-            const playerPos = camera.position;
+            // Вычисляем новое направление
+            const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+            const newDirection = forward.reflect(fromPortal.getWorldDirection(new THREE.Vector3()));
             
-            scientists.forEach((scientist, index) => {
-                const dx = playerPos.x - scientist.position.x;
-                const dz = playerPos.z - scientist.position.z;
-                const distance = Math.sqrt(dx * dx + dz * dz);
-                
-                if (distance < 15 && scientist.state === 'idle') {
-                    // Учёный замечает игрока
-                    scientist.state = 'scared';
-                    
-                    if (Math.random() > 0.5) {
-                        showHudMessage("HELP ME!", 2000);
-                    } else {
-                        showHudMessage("IT'S FREEMAN!", 2000);
-                    }
-                }
-            });
-        }
-        
-        // Обновление полоски здоровья
-        function updateHealthBar() {
-            healthBar.style.width = `${playerHealth}%`;
-        }
-        
-        // Показать сообщение на HUD
-        function showHudMessage(message, duration = 2000) {
-            hudMessage.textContent = message;
-            hudMessage.style.display = 'block';
+            // Применяем телепортацию
+            camera.position.copy(newPosition);
             
-            setTimeout(() => {
-                hudMessage.style.display = 'none';
-            }, duration);
+            // Сохраняем скорость для сохранения импульса
+            velocity.multiplyScalar(1.5);
         }
-        
-        // Сброс игрока после смерти
-        function resetPlayer() {
-            playerHealth = 100;
-            updateHealthBar();
-            camera.position.set(0, 2, 0);
-        }
-        
-        // Обработчик клика мыши (выстрел)
-        function onMouseClick(event) {
-            if (!gameStarted || !controls.isLocked) return;
-            
-            // Эффект выстрела
-            const muzzleFlash = document.createElement('div');
-            muzzleFlash.style.position = 'absolute';
-            muzzleFlash.style.top = '50%';
-            muzzleFlash.style.left = '50%';
-            muzzleFlash.style.width = '40px';
-            muzzleFlash.style.height = '40px';
-            muzzleFlash.style.background = 'radial-gradient(circle, #ff8c00, #ff4500)';
-            muzzleFlash.style.borderRadius = '50%';
-            muzzleFlash.style.transform = 'translate(-50%, -50%)';
-            muzzleFlash.style.zIndex = '5';
-            document.getElementById('uiContainer').appendChild(muzzleFlash);
-            
-            // Удаление эффекта через 50 мс
-            setTimeout(() => {
-                document.getElementById('uiContainer').removeChild(muzzleFlash);
-            }, 50);
-            
-            // Проверка попадания
-            checkHit();
-        }
-        
-        // Проверка попадания
-        function checkHit() {
-            const playerPos = camera.position;
-            let hit = false;
-            
-            enemies.forEach((enemy, index) => {
-                const dx = playerPos.x - enemy.position.x;
-                const dz = playerPos.z - enemy.position.z;
-                const distance = Math.sqrt(dx * dx + dz * dz);
-                
-                if (distance < 20 && Math.random() > 0.3) {
-                    enemy.health -= 25;
-                    hit = true;
-                    
-                    if (enemy.health <= 0) {
-                        showHudMessage("TARGET NEUTRALIZED", 1500);
-                        enemies.splice(index, 1);
-                    }
-                }
-            });
-        }
-        
-        // Обработчик клавиш
+
         function onKeyDown(event) {
-            if (event.code === 'KeyR') {
-                // Перезарядка
-                if (currentWeapon !== 'crowbar') {
-                    ammoCount.textContent = WEAPONS[currentWeapon].ammo;
-                    showHudMessage("RELOADING", 1000);
-                }
-            }
-            else if (event.code === 'Digit1') {
-                // Смена оружия
-                currentWeapon = 'crowbar';
-                ammoCount.textContent = WEAPONS.crowbar.ammo;
-                document.querySelector('.weapon-name').textContent = WEAPONS.crowbar.name;
-                document.querySelector('.weapon-icon').textContent = 'C';
-            }
-            else if (event.code === 'Digit2') {
-                currentWeapon = 'glock';
-                ammoCount.textContent = WEAPONS.glock.ammo;
-                document.querySelector('.weapon-name').textContent = WEAPONS.glock.name;
-                document.querySelector('.weapon-icon').textContent = '9';
-            }
-            else if (event.code === 'Digit3') {
-                currentWeapon = 'shotgun';
-                ammoCount.textContent = WEAPONS.shotgun.ammo;
-                document.querySelector('.weapon-name').textContent = WEAPONS.shotgun.name;
-                document.querySelector('.weapon-icon').textContent = 'S';
-            }
-            else if (event.code === 'Digit4') {
-                currentWeapon = 'crossbow';
-                ammoCount.textContent = WEAPONS.crossbow.ammo;
-                document.querySelector('.weapon-name').textContent = WEAPONS.crossbow.name;
-                document.querySelector('.weapon-icon').textContent = 'X';
+            switch (event.code) {
+                case 'KeyW': moveForward = true; break;
+                case 'KeyA': moveLeft = true; break;
+                case 'KeyS': moveBackward = true; break;
+                case 'KeyD': moveRight = true; break;
+                case 'Space': 
+                    if (canJump) {
+                        velocity.y = jumpStrength;
+                        canJump = false;
+                    }
+                    break;
             }
         }
-        
-        // Обработчик изменения размера окна
+
+        function onKeyUp(event) {
+            switch (event.code) {
+                case 'KeyW': moveForward = false; break;
+                case 'KeyA': moveLeft = false; break;
+                case 'KeyS': moveBackward = false; break;
+                case 'KeyD': moveRight = false; break;
+            }
+        }
+
+        function onMouseDown(event) {
+            if (!controls.isLocked) return;
+
+            // Определяем цвет портала по кнопке мыши
+            const portalColor = (event.button === 0) ? 'blue' : 'orange';
+            
+            // Обновляем позицию рейкастера
+            raycaster.setFromCamera(new THREE.Vector2(), camera);
+            
+            // Проверяем пересечения
+            const intersects = raycaster.intersectObjects(objects);
+            if (intersects.length > 0) {
+                const point = intersects[0].point;
+                const normal = intersects[0].face.normal.clone();
+                createPortal(point, normal, portalColor);
+            }
+        }
+
         function onWindowResize() {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
-        
-        // Анимация
+
         function animate() {
             requestAnimationFrame(animate);
-            
-            // Обновление врагов и учёных
-            if (gameStarted) {
-                updateEnemies();
-                updateScientists();
+
+            // Движение игрока
+            if (controls.isLocked) {
+                const delta = 0.1;
+                velocity.x = 0;
+                velocity.z = 0;
                 
-                // Проверка достижения комплекса Лямбда
-                const playerPos = camera.position;
-                const dx = playerPos.x - 40;
-                const dz = playerPos.z - (-30);
-                const distance = Math.sqrt(dx * dx + dz * dz);
+                if (moveForward) velocity.z -= 0.1;
+                if (moveBackward) velocity.z += 0.1;
+                if (moveLeft) velocity.x -= 0.1;
+                if (moveRight) velocity.x += 0.1;
                 
-                if (distance < 5) {
-                    showHudMessage("LAMBDA COMPLEX REACHED", 5000);
+                // Применяем гравитацию
+                velocity.y -= gravity;
+                
+                // Обновляем позицию камеры
+                camera.position.add(velocity);
+                
+                // Простая проверка коллизии с полом
+                if (camera.position.y < 1.6) {
+                    camera.position.y = 1.6;
+                    velocity.y = 0;
+                    canJump = true;
                 }
+                
+                // Обработка телепортации
+                handleTeleportation();
             }
-            
+
             renderer.render(scene, camera);
         }
-        
+
+        // Переменные управления
+        let moveForward = false;
+        let moveBackward = false;
+        let moveLeft = false;
+        let moveRight = false;
+
         // Запуск игры
-        startBtn.addEventListener('click', function() {
-            startScreen.style.display = 'none';
-            gameStarted = true;
-            initGame();
-            showHudMessage("WARNING: RESONANCE CASCADE DETECTED", 3000);
-        });
+        init();
     </script>
 </body>
 </html>
